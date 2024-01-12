@@ -16,14 +16,6 @@ if (document.title === "Discord Updater") {
 	discl.log("Waiting for load...", "Bootloader");
 	waitForLoad();
 
-	function isolatedEval(code) {
-		var isolatedIframe = document.createElement("iframe");
-		isolatedIframe.style.display = "none";
-		document.body.appendChild(isolatedIframe);
-		isolatedIframe.contentWindow.eval("document = \n" + code);
-		document.body.removeChild(isolatedIframe);
-	}
-
 	function executeScripts(scripts) {
 		discl.scripts = scripts;
 		const executedScripts = [];
@@ -67,6 +59,23 @@ if (document.title === "Discord Updater") {
 
 	function loaded() {
 		discl.log("Loaded", "Bootloader");
+		let wordmark = document.querySelector("[class^='wordmark']");
+		wordmark.appendChild(
+			(() => {
+				var disclmark = document.createElement("span");
+				disclmark.innerText = "(Discl)";
+				disclmark.style.verticalAlign = "text-top";
+				disclmark.style.fontFamily = "var(--font-display)";
+				disclmark.style.fontSize = ".7em";
+				disclmark.style.fontWeight = "700";
+				disclmark.style.lineHeight = "13px";
+				disclmark.style.display = "inline-block";
+				disclmark.style.marginTop = "0.2em";
+				return disclmark;
+			})()
+		);
+		wordmark.style.fontSize = "1em";
+
 		discl
 			.webserverFetch("/scripts/render")
 			.then((response) => {

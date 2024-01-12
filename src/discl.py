@@ -8,7 +8,6 @@ import colorama
 import time
 import signal
 
-
 if platform != "win32":
 	raise NotImplementedError("Discl is not yet supported on non-windows platforms. Please visit the GitHub page for more information.")
 
