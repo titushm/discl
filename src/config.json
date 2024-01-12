@@ -1,0 +1,16 @@
+{
+	"injectionFailureRetries": 3,
+	"injectionFailureTimeout": 3,
+	"injectionTimeout": 3,
+	"backoffTime": 3,
+	"retries": 3,
+	"ports": {
+		"render": 9511,
+		"main": 9512,
+		"webserver": 9513
+	},
+	"splash": {
+		"title": "Discl is injecting",
+		"message": "Thanks for using Discl"
+	}
+}

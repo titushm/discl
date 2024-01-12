@@ -1,0 +1,5 @@
+colorama>=0.4.6
+psutil>=5.9.7
+websocket-client>=1.7.0
+fastapi>=0.108.0
+uvicorn>=0.25.0
