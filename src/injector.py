@@ -31,7 +31,7 @@ class Injector():
 
 	def cleanup_discord(self):
 		try:
-			os.system(f"taskkill /im discord.exe /f >nul 2>&1")
+			subprocess.call('taskkill /F /IM discord.exe', creationflags=subprocess.CREATE_NO_WINDOW)
 		except Exception as e:
 			utils.log_debug(e)
 			utils.log(f"Failed to kill discord processes", colorama.Fore.RED)
@@ -43,7 +43,7 @@ class Injector():
 		self.cleanup_discord()
 		utils.log("Starting discord in debug mode.", colorama.Fore.YELLOW)
 		try:
-			self.discord_process = subprocess.Popen([self.process_path, f"--remote-debugging-port={str(self.render_port)}", f"--inspect={str(self.main_port)}"], shell=True, creationflags=0x00000008|0x00000200, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+			self.discord_process = subprocess.Popen([self.process_path, f"--remote-debugging-port={str(self.render_port)}", f"--inspect={str(self.main_port)}"], shell=True, creationflags=subprocess.CREATE_NO_WINDOW|subprocess.DETACHED_PROCESS, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 		except:
 			return False
 		self.hook_thread = threading.Thread(target=self._hook_debug_log)

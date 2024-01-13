@@ -46,7 +46,7 @@ class Process():
 class Utils():
 	def __init__(self):
 		self.debug_state = False
-	
+
 	def log(self, msg, colour=colorama.Fore.WHITE):
 		timestamp = datetime.datetime.now().strftime("%H:%M:%S")
 		print(colorama.Fore.LIGHTBLACK_EX + f"[{timestamp}] " + colour + msg + colorama.Fore.RESET)
