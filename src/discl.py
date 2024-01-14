@@ -1,12 +1,9 @@
 import os
-from sys import platform
-from utils import utils
-from injector import Injector
-from webserver import WebServer
+import time
 from pathlib import Path
 import colorama
-import time
-import signal
+from sys import platform
+from utils import utils
 
 if platform != "win32":
 	raise NotImplementedError("Discl is not yet supported on non-windows platforms. Please visit the GitHub page for more information.")
@@ -34,17 +31,17 @@ for proc in python_processes:
 			os._exit(0)
 		else:
 			utils.log("Discl is running, however no discord processes are active. Closing discl ghost process", colorama.Fore.YELLOW)
-			os.kill(proc.pid, signal.SIGTERM)
+			os.kill(proc.pid, 15) # 15 = SIGTERM
 			proc.close_handle()
-
-server = WebServer(WEBSERVER_PORT, REQUEST_TOKEN)
-server.start()
-
 for i in range(0, RETRIES):
+	from injector import Injector
 	discord_injector = Injector(str(LATEST_APP_PATH) + "\\Discord.exe", RENDER_PORT, MAIN_PORT, REQUEST_TOKEN)
 	success = discord_injector.open_debug()
 	if (not success):
 		utils.log("Failed to open discord in debug mode", colorama.Fore.RED)
+	from webserver import WebServer
+	server = WebServer(WEBSERVER_PORT, REQUEST_TOKEN)
+	server.start()
 	success = discord_injector.inject()
 	if (success):
 		utils.log("Discl successfully injected into Discord", colorama.Fore.GREEN)
