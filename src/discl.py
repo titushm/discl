@@ -4,7 +4,6 @@ from pathlib import Path
 import colorama
 from sys import platform
 from utils import utils
-
 if platform != "win32":
 	raise NotImplementedError("Discl is not yet supported on non-windows platforms. Please visit the GitHub page for more information.")
 
@@ -39,9 +38,10 @@ for i in range(0, RETRIES):
 	success = discord_injector.open_debug()
 	if (not success):
 		utils.log("Failed to open discord in debug mode", colorama.Fore.RED)
-	from webserver import WebServer
-	server = WebServer(WEBSERVER_PORT, REQUEST_TOKEN)
-	server.start()
+	if (i == 0):
+		from webserver import WebServer
+		server = WebServer(WEBSERVER_PORT, REQUEST_TOKEN)
+		server.start()
 	success = discord_injector.inject()
 	if (success):
 		utils.log("Discl successfully injected into Discord", colorama.Fore.GREEN)

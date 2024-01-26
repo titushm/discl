@@ -30,7 +30,13 @@ class Communicator():
 					utils.log("Failed to inject before bootloader", colorama.Fore.RED)
 				else:
 					utils.log("Injected before bootloader", colorama.Fore.GREEN)
-			render_socket_url = (requests.get(f"http://localhost:{self.render_port}/json/list?t={str(int(time.time()))}")).json()[0]["webSocketDebuggerUrl"]
+			while True:
+				try:
+					render_socket_url = (requests.get(f"http://localhost:{self.render_port}/json/list?t={str(int(time.time()))}")).json()[0]["webSocketDebuggerUrl"]
+					break
+				except:
+					pass
+
 			self.render_socket = websocket.create_connection(render_socket_url)
 			utils.log(f"Connected to render socket at {render_socket_url}", colorama.Fore.GREEN)
 		except Exception as e:

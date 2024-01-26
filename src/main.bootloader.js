@@ -14,7 +14,7 @@ dialog.showErrorBox = function (title, content) {
 discl.log("Loaded", "Bootloader");
 
 function executeScripts(scripts) {
-	// dont console.log scripts, it blocks otherwise (I actually have zero idea why)
+	// Dont console.log here, it blocks otherwise (I actually have zero idea why)
 	discl.scripts = scripts;
 	const executedScripts = [];
 	Object.keys(discl.scripts).forEach((script) => {
@@ -58,10 +58,9 @@ function executeScripts(scripts) {
 discl
 	.webserverFetch("/scripts/main", "GET")
 	.then((response) => {
-		// Dont console.log response, it blocks otherwise (I actually have zero idea why)
+		// Dont console.log here, it blocks otherwise (I actually have zero idea why)
 		let scripts = response.body;
 		discl.log("Fetched scripts", "Bootloader");
-		console.log(scripts);
 		executeScripts(scripts);
 	})
 	.catch((error) => {
