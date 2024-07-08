@@ -23,3 +23,4 @@ Betterdiscord hasnt been tested but most likley will work with discl.
 - [ ] Graphics library.
 - [ ] Fix youtube embeds just not loading
 - [ ] Better installer using wpf
+- [ ] finish storage system
