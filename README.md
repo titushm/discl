@@ -22,3 +22,4 @@ Betterdiscord hasnt been tested but most likley will work with discl.
 - [ ] Fix infinite restart loop when discord splash screen is updating.
 - [ ] Graphics library.
 - [ ] Fix youtube embeds just not loading
+- [ ] Better installer using wpf
