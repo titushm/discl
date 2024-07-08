@@ -27,3 +27,9 @@ Betterdiscord hasnt been tested but most likley will work with discl.
 > render context scripts are not affected by the beforeBootloader property.
 > fixed some bugs regarding the splash screen being blocked and freezing.
 > New builtin gateway module to view the discord gateway websocket.
+
+# Todo
+- [ ] Graphics library.
+- [ ] Fix youtube embeds just not loading
+- [ ] Better installer using wpf
+- [ ] finish storage system
