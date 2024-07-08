@@ -1,4 +1,4 @@
-import websocket
+from websockets.sync.client import connect
 import time
 import json
 import requests
@@ -7,8 +7,6 @@ from utils import utils
 
 config = utils.get_config()
 
-websocket.enableTrace(False)
-
 class Communicator():
 	def __init__(self, render_port, main_port, initial_request_token):
 		self.render_port = render_port
@@ -16,12 +14,13 @@ class Communicator():
 		self.render_socket = None
 		self.main_socket = None
 		self.initial_request_token = initial_request_token
+		self.render_socket_url = None
 
 	def connect(self, main_socket_url=None, before_bootloader_path=None):
 		try:
 			if (not main_socket_url):
 				main_socket_url = (requests.get(f"http://localhost:{self.main_port}/json/list")).json()[0]["webSocketDebuggerUrl"]
-			self.main_socket = websocket.create_connection(main_socket_url)
+			self.main_socket = connect(main_socket_url)
 			utils.log(f"Connected to main socket at {main_socket_url}", colorama.Fore.GREEN)
 			if (before_bootloader_path):
 				utils.log("Injecting before bootloader", colorama.Fore.YELLOW)
@@ -32,13 +31,13 @@ class Communicator():
 					utils.log("Injected before bootloader", colorama.Fore.GREEN)
 			while True:
 				try:
-					render_socket_url = (requests.get(f"http://localhost:{self.render_port}/json/list?t={str(int(time.time()))}")).json()[0]["webSocketDebuggerUrl"]
+					self.render_socket_url = (requests.get(f"http://localhost:{self.render_port}/json/list?t={str(int(time.time()))}")).json()[0]["webSocketDebuggerUrl"]
 					break
 				except:
 					pass
 
-			self.render_socket = websocket.create_connection(render_socket_url)
-			utils.log(f"Connected to render socket at {render_socket_url}", colorama.Fore.GREEN)
+			self.render_socket = connect(self.render_socket_url)
+			utils.log(f"Connected to render socket at {self.render_socket_url}", colorama.Fore.GREEN)
 		except Exception as e:
 			utils.log_debug(e)
 			return False
@@ -72,6 +71,7 @@ class Communicator():
 				const discl = {{}};
 				discl.context = "{context}";
 				discl.config = {json.dumps(config)};
+				discl.executed = false;
 				discl.request_token = "{self.initial_request_token}";
 				discl.webserverFetch = function(endpoint, options = {{}}) {{
 					options.headers = options.headers || {{}};
@@ -82,21 +82,29 @@ class Communicator():
 					console.log(`%c[Discl] %c[${{moduleName}}] %c${{msg}}`, "color: #5865f2; font-weight: bold;", "color: #249637; font-weight: bold;", "color: #000000");
 				}}
 				discl.scripts = {{}};
-				
-				discl.resetExportRequire = function() {{
+				discl.require = (name) => {{
+					if (discl.scripts.hasOwnProperty(name)) {{
+						if (discl.scripts[name].export === null) {{
+							console.log(discl.scripts[name].export)
+							const error = new Error(name + " does not have an export.");
+							error.name = "EXPORT_NOT_FOUND";
+							throw error;
+						}}
+						return discl.scripts[name].export;
+					}}
+					const error = new Error("Cannot find module " + name + ". This may be due to differences in the contexts of the two scripts.");
+					error.name = "MODULE_NOT_FOUND";
+					throw error;
+				}};
+
+				discl.resetExport = function() {{
 					discl.export = function() {{
 						error = new Error("The export function has been called before the bootloader has been loaded.");
 						error.name = "BOOTLOADER_NOT_LOADED";
 						throw error;
 					}}
-
-					discl.require = function() {{
-						error = new Error("The require function has been called before the bootloader has been loaded.");
-						error.name = "BOOTLOADER_NOT_LOADED";
-						throw error;
-					}}
 				}}
-				discl.resetExportRequire();
+				discl.resetExport();
 
 				discl.log("Discl object injected", "Injector");
 			"""
@@ -108,6 +116,7 @@ class Communicator():
 				discl.nodeRequire = require;
 				discl.config = {json.dumps(config)};
 				discl.request_token = "{self.initial_request_token}";
+				discl.gateway = {{}};
 				discl.webserverFetch = function(endpoint, method, options = {{}}) {{
 					const {{ promisify }} = require("util");
 					const request = promisify(require(process.cwd() + "/app.asar/node_modules/request"));
@@ -117,14 +126,11 @@ class Communicator():
 					const requestOptions = {{
 						method: method.toLowerCase(),
 						uri: `http://127.0.0.1:${{discl.config.ports.webserver}}${{endpoint}}`,
-						headers: {{
-							Authorization: discl.request_token,
-							...options.headers
-						}},
+						headers: options.headers,
 						json: true,
 						...options
 					}};
-					  return new Promise((resolve, reject) => {{
+					return new Promise((resolve, reject) => {{
 						request(requestOptions, function (error, response, body) {{
 						if (error) {{
 							reject(error);
@@ -139,21 +145,28 @@ class Communicator():
 					console.log(`%c[Discl] %c[${{moduleName}}] %c${{msg}}`, "color: #5865f2; font-weight: bold;", "color: #249637; font-weight: bold;", "color: #000000");
 				}}
 				discl.scripts = {{}};
-				
-				discl.resetExportRequire = function() {{
-					discl.export = function() {{
-						error = new Error("The export function has been called before the bootloader has been loaded.");
-						error.name = "BOOTLOADER_NOT_LOADED";
-						throw error;
+				discl.require = (name) => {{
+					if (discl.scripts.hasOwnProperty(name)) {{
+						if (discl.scripts[name].export == null) {{
+							const error = new Error(name + " does not have an export.");
+							error.name = "EXPORT_NOT_FOUND";
+							throw error;
+						}}
+						return discl.scripts[name].export;
 					}}
+					const error = new Error("Cannot find module " + name + ". This may be due to differences in the contexts of the two scripts.");
+					error.name = "MODULE_NOT_FOUND";
+					throw error;
+				}};
 
-					discl.require = function() {{
-						error = new Error("The require function has been called before the bootloader has been loaded.");
+				discl.resetExport = function() {{
+					discl.export = function() {{
+						error = new Error("The export function can only be called from a script.");
 						error.name = "BOOTLOADER_NOT_LOADED";
 						throw error;
 					}}
 				}}
-				discl.resetExportRequire();
+				discl.resetExport();
 
 				discl.log("Discl object injected", "Injector");
 			"""
@@ -184,9 +197,12 @@ class Communicator():
 			utils.log("Injection state: " + str(state) + " " + str(response.status_code), colorama.Fore.YELLOW)
 			if (state["reason"] == "early_injection"):
 				utils.log(f"Discl bootloader injected too early, retrying in {config['injectionFailureTimeout']}", colorama.Fore.YELLOW)
-				render_socket_url = (requests.get(f"http://localhost:{self.render_port}/json/list?t={str(int(time.time()))}")).json()[0]["webSocketDebuggerUrl"] # This takes about 2 seconds
-				time.sleep(config['injectionFailureTimeout'] - 2)
-				self.render_socket = websocket.create_connection(render_socket_url)
+				time.sleep(config['injectionFailureTimeout'])
+				try:
+					self.render_socket_url = (requests.get(f"http://localhost:{self.render_port}/json/list?t={str(int(time.time()))}")).json()[0]["webSocketDebuggerUrl"] # This takes about 2 seconds
+					self.render_socket = connect(self.render_socket_url)
+				except:
+					utils.log("Failed to connect to render socket", colorama.Fore.RED)
 				continue
 			break
 

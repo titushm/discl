@@ -8,6 +8,8 @@ import json
 import re
 import random
 import ast
+import time
+import erlpack
 
 colorama.init()
 ntdll = ctypes.WinDLL("ntdll")
@@ -47,6 +49,21 @@ class Utils():
 	def __init__(self):
 		self.debug_state = False
 
+	def serialize_term_value(self, obj):
+		if isinstance(obj, erlpack.Atom):
+			return str(obj)
+		elif isinstance(obj, bytes):
+			return obj.decode("utf-8")
+		return obj
+
+	def serializable_term_json(self, obj):
+		if isinstance(obj, dict):
+			return {self.serialize_term_value(k): self.serializable_term_json(v) for k, v in obj.items()}
+		elif isinstance(obj, list):
+			return [self.serializable_term_json(item) for item in obj]
+		else:
+			return self.serialize_term_value(obj)
+
 	def log(self, msg, colour=colorama.Fore.WHITE):
 		timestamp = datetime.datetime.now().strftime("%H:%M:%S")
 		print(colorama.Fore.LIGHTBLACK_EX + f"[{timestamp}] " + colour + msg + colorama.Fore.RESET)
@@ -57,7 +74,13 @@ class Utils():
 
 	def get_config(self):
 		with open(os.path.join(os.path.dirname(__file__), "config.json"), "r") as f:
-			return json.load(f)
+			try:
+				return json.load(f)#
+			except Exception as e:
+				self.log("Failed to parse config file\n" + str(e), colorama.Fore.RED)
+
+				time.sleep(3)
+				os._exit(0)
 
 	def generate_request_token(self):
 		return "".join(random.choice("0123456789ABCDEF") for i in range(16))

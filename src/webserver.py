@@ -1,13 +1,20 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, WebSocket
+from starlette.websockets import WebSocketState, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from collections import defaultdict, deque
 from utils import utils
 import colorama
 import uvicorn
 import threading
 from pathlib import Path
 import os
+import graphlib
+import json
+import base64
+import zlib
+import erlpack
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
 
 app = FastAPI()
 injection_state = {"injected": False, "reason": None}
@@ -19,8 +26,13 @@ app.add_middleware(
 	allow_headers=["*"],
 )
 
+app.gateway_connections = {"host": None, "listeners": []}
+app.gateway_cache = bytearray()
+app.decompressor = zlib.decompressobj()
+app.gateway_encoding = None
 config = utils.get_config()
 SCRIPT_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\scripts"))
+SCRIPT_STORAGE_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\storage"))
 
 def get_script(script_name):
 	with open(os.path.join(SCRIPT_PATH, script_name), "r") as f:
@@ -29,32 +41,41 @@ def get_script(script_name):
 def get_dependencies(script_config):
 	return script_config.get("dependencies", [])
 
-def topological_sort(scripts):
-	in_degree = defaultdict(int)
-	graph = defaultdict(list)
+def order_scripts(scripts, context):
+	scripts_dependencies = {script: get_dependencies(scripts[script]) for script in scripts}
+	script_dependencies_cache[context] = scripts_dependencies
+	ts = graphlib.TopologicalSorter(scripts_dependencies)
+	sorted_script_names = list(ts.static_order())
+	sorted_scripts = {}
+	for script_name in sorted_script_names:
+		if script_name in scripts:
+			sorted_scripts[script_name] = scripts[script_name]
+		else:
+			found = False
+			for key in script_dependencies_cache:
+				if (script_name in script_dependencies_cache[key]):
+					found = True
+					
+			if (not found):
+				utils.log(f"Circular dependency detected for script {script_name}", colorama.Fore.RED)
+				return
+			utils.log(f"Script {script_name} not found in scripts for the current context. Ignoring", colorama.Fore.YELLOW)
+	return sorted_scripts
 
-	for script_name, script_config in scripts.items():
-		in_degree[script_name] = 0
-		for dependency in get_dependencies(script_config):
-			graph[dependency].append(script_name)
-			in_degree[script_name] += 1
+def get_scripts(context, before_bootloader = False):
+	scripts = {}
+	script_filenames = list(SCRIPT_PATH.glob("*.js"))
+	for script_name in script_filenames:
+		response = utils.get_script_config(script_name)
+		if (not response["success"]):
+			utils.log(response["error"], colorama.Fore.RED)
+			continue
+		if ((response["config"]["context"]["context"] == context or response["config"]["context"]["context"] == "common") and (response["config"]["context"]["before_bootloader"] == before_bootloader or context == "render")):
+			scripts[script_name.name] = response["config"]
+			scripts[script_name.name]["code"] = get_script(script_name.name)
+	return scripts
 
-	queue = deque(script_name for script_name, indeg in in_degree.items() if indeg == 0)
-	result = []
-
-	while queue:
-		current_script = queue.popleft()
-		result.append(current_script)
-
-		for neighbor in graph[current_script]:
-			in_degree[neighbor] -= 1
-			if in_degree[neighbor] == 0:
-				queue.append(neighbor)
-
-	if len(result) != len(scripts):
-		utils.log("Circular import detected for " + script_name, colorama.Fore.RED)
-
-	return result
+script_dependencies_cache = {"render": get_scripts("render"), "main": get_scripts("main")}
 
 @app.middleware("http")
 async def intercept_request(request: Request, call_next):
@@ -66,22 +87,87 @@ async def intercept_request(request: Request, call_next):
 	response = await call_next(request)
 	return response
 
-@app.get("/scripts/{context}", status_code=200)
-async def get_scripts(context: str):
-	scripts = {}
-	script_filenames = list(SCRIPT_PATH.glob("*.js"))
-	for script_name in script_filenames:
-		response = utils.get_script_config(script_name)
-		if (not response["success"]):
-			utils.log(response["error"], colorama.Fore.RED)
-			continue
-		if (response["config"]["context"] == context or response["config"]["context"] == "common"):
-			scripts[script_name.name] = response["config"]
-			scripts[script_name.name]["code"] = get_script(script_name.name)
+@app.websocket("/gateway/relay/{client_type}")
+async def gateway_relay(websocket: WebSocket, client_type: str):
+	await websocket.accept()
+	if (client_type == "host"):
+		app.gateway_connections["host"] = websocket
+		utils.log("Host connected", colorama.Fore.CYAN)
+	elif (client_type == "listener"):
+		app.gateway_connections["listeners"].append(websocket)
+		utils.log("Listener connected", colorama.Fore.CYAN)
 
-	sorted_script_names = topological_sort(scripts)
-	sorted_scripts = {script_name: scripts[script_name] for script_name in sorted_script_names}
+	else:
+		await websocket.close()
+	
+	while True:
+		data = await websocket.receive_text()
+		json_data = json.loads(data)
+		opcode = json_data["op"]
+		match opcode:
+			case 0:
+				url = json_data["data"]["url"]
+				parsed_url = urlparse(url)
+				query = parse_qs(parsed_url.query)
+				app.gateway_encoding = query["encoding"][0]
+				app.gateway_compression = query["compress"][0]
+
+			case 1:
+				payload = base64.b64decode(json_data["data"]["response"]["payloadData"])
+				app.gateway_cache.extend(payload)
+				if (payload.endswith(b"\x00\x00\xff\xff") and len(app.gateway_cache) > 4): #TODO: Test that this still works when no compression or json encoding.
+					if (app.gateway_compression == "zlib-stream"):
+						try:
+							payload = app.decompressor.decompress(app.gateway_cache)
+						except zlib.error as e:
+							utils.log("Failed to decompress payload: " + str(e) , colorama.Fore.RED)
+							app.gateway_cache.clear()
+							continue
+					app.gateway_cache.clear()
+					if (app.gateway_encoding == "etf"):
+						payload = erlpack.unpack(payload)
+
+					for listener in app.gateway_connections["listeners"]:
+						if (listener.client_state == WebSocketState.CONNECTED):
+							serialized_payload = {"op": opcode,"payload": utils.serializable_term_json(payload)}
+							await listener.send_json(serialized_payload)
+						else:
+							app.gateway_connections["listeners"].remove(listener)
+			
+			case 2:
+				payload = base64.b64decode(json_data["data"]["response"]["payloadData"])
+				if (app.gateway_encoding == "etf"):
+						payload = erlpack.unpack(payload)
+
+				for listener in app.gateway_connections["listeners"]:
+					if (listener.client_state == WebSocketState.CONNECTED):
+						serialized_payload = {"op": opcode,"payload": utils.serializable_term_json(payload)}
+						await listener.send_json(serialized_payload)
+					else:
+						app.gateway_connections["listeners"].remove(listener)
+
+
+@app.get("/scripts/{context}", status_code=200)
+async def return_scripts(context: str, before_bootloader: bool = False):
+	scripts = get_scripts(context, before_bootloader)
+	sorted_scripts = order_scripts(scripts, context)
 	return JSONResponse(content=sorted_scripts, status_code=200)
+
+@app.get("/storage/{context}/{script}", status_code=200)
+async def get_script_storage(context: str, script: str):
+	if (not SCRIPT_STORAGE_PATH.joinpath(context + script).exists()):
+		config = open(SCRIPT_STORAGE_PATH.joinpath(context + script), "w")
+		config.write("{}")
+		config.close()
+		with open(SCRIPT_STORAGE_PATH.joinpath(context + script), "r") as f:
+			return JSONResponse(content=f.read(), status_code=200)
+
+@app.post("/storage/{context}/{script}", status_code=200)
+async def set_script_storage(context: str, script: str, request: Request):
+	content = await request.body()
+	with open(SCRIPT_STORAGE_PATH.joinpath(context + script), "w") as f:
+		f.write(content.decode())
+	return Response(status_code=200)
 
 @app.get("/injection/state", status_code=200)
 async def get_injection_state():

@@ -3,7 +3,7 @@
 // @version: 1.0
 // @description: "Blocks the discord science telemetry requests"
 // @author: "TitusHM"
-// @context: "render"
+// @context: {"context": "render", "before_bootloader": False}
 // @dependencies: ["Requests.js"]
 // ==/Discl-Script==
 

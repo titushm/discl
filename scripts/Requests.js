@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Used to intercept and modify requests"
 // @author: "TitusHM"
-// @context: "common"
+// @context: {"context": "common", "before_bootloader": False, "on_loaded": False}
 // @dependencies: []
 // ==/Discl-Script==
 
@@ -17,7 +17,7 @@ if (discl.context == "render") {
 		this.cache = {
 			method,
 			url,
-			headers: {},
+			headers: {}
 		};
 		return discl.XMLHttpRequestOpen.apply(this, [method, url]);
 	}; // This is to cache the url and method so it can be read on the onRequest callback
@@ -37,7 +37,7 @@ if (discl.context == "render") {
 			response: this.response,
 			responseText: this.responseText,
 			status: this.status,
-			statusText: this.statusText,
+			statusText: this.statusText
 		};
 		Requests.callbacks.onRequest.forEach((callback) => callback(params));
 		if (params.cancel) return;
@@ -61,7 +61,7 @@ if (discl.context == "render") {
 			frame: details.frame,
 			contents: details.webContents,
 			resourceType: details.resourceType,
-			timestamp: details.timestamp,
+			timestamp: details.timestamp
 		};
 		//TODO: Make properties like body actually have an effect when changed.
 		Requests.callbacks.onRequest.forEach((callback) => callback(params));
@@ -72,7 +72,7 @@ if (discl.context == "render") {
 class requestEvent {
 	constructor() {
 		this.callbacks = {
-			onRequest: [],
+			onRequest: []
 		};
 	}
 

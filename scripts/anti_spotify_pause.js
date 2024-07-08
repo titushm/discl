@@ -3,7 +3,7 @@
 // @version: 1.0
 // @description: "Bypasses the 30s limit of talking in a voice chat and listening to spotify"
 // @author: "TitusHM"
-// @context: "render"
+// @context: {"context": "render", "before_bootloader": False}
 // @dependencies: ["Requests.js"]
 // ==/Discl-Script==
 

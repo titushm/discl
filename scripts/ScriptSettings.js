@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: ""
 // @author: "TitusHM"
-// @context: "common"
+// @context: {"context": "render", "before_bootloader": False}
 // @dependencies: ["Hooks.js"]
 // ==/Discl-Script==
 
@@ -21,5 +21,5 @@ hooks.settingsHook.onOpen(() => {
 });
 
 hooks.settingsHook.onClose(() => {
-	discl.log("Settings opened", "ScriptSettings");
+	discl.log("Settings closed", "ScriptSettings");
 });

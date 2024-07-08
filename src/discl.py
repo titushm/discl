@@ -7,6 +7,8 @@ from utils import utils
 if platform != "win32":
 	raise NotImplementedError("Discl is not yet supported on non-windows platforms. Please visit the GitHub page for more information.")
 
+utils.debug()
+
 DISCORD_APPDATA_PATH = Path(os.getenv("LOCALAPPDATA") + "\\Discord")
 if not DISCORD_APPDATA_PATH.exists():
 	raise FileNotFoundError("Discord must be installed to use Discl.")
@@ -32,6 +34,7 @@ for proc in python_processes:
 			utils.log("Discl is running, however no discord processes are active. Closing discl ghost process", colorama.Fore.YELLOW)
 			os.kill(proc.pid, 15) # 15 = SIGTERM
 			proc.close_handle()
+
 for i in range(0, RETRIES):
 	from injector import Injector
 	discord_injector = Injector(str(LATEST_APP_PATH) + "\\Discord.exe", RENDER_PORT, MAIN_PORT, REQUEST_TOKEN)

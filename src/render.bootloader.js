@@ -3,46 +3,15 @@ if (document.title === "Discord Updater") {
 } else {
 	discl.webserverFetch("/injection/success", { method: "POST" });
 
-	function waitForLoad() {
-		const contentElements = document.querySelectorAll("[class^='content__']");
-		const contentElement = contentElements[contentElements.length - 1];
-		const childLength = contentElement?.children.length;
-		if (contentElements.length == 0 || childLength == 2) {
-			setTimeout(waitForLoad, 100);
-			return;
-		}
-		loaded();
-	}
-	discl.log("Waiting for load...", "Bootloader");
-	waitForLoad();
-
 	function executeScripts(scripts) {
-		discl.scripts = scripts;
-		const executedScripts = [];
+		discl.log("Executing scripts " + discl.scripts, "Bootloader");
+		Object.assign(discl.scripts, scripts);
 		Object.keys(discl.scripts).forEach((script) => {
+			if (discl.scripts[script].executed) return;
 			discl.scripts[script].export = null;
 
 			discl.export = (object) => {
 				discl.scripts[script].export = object;
-			};
-
-			discl.require = (name) => {
-				if (discl.scripts.hasOwnProperty(name)) {
-					if (!executedScripts.includes(name)) {
-						discl.log(script + " requires " + name, "Bootloader");
-						console.log(discl.scripts[name]);
-						executeScripts({ [name]: discl.scripts[name], [script]: discl.scripts[script] });
-					}
-					if (discl.scripts[name].export == null) {
-						const error = new Error(name + " does not have an export.");
-						error.name = "EXPORT_NOT_FOUND";
-						throw error;
-					}
-					return discl.scripts[name].export;
-				}
-				const error = new Error("Cannot find module " + name);
-				error.name = "MODULE_NOT_FOUND";
-				throw error;
 			};
 
 			try {
@@ -51,11 +20,26 @@ if (document.title === "Discord Updater") {
 			} catch (error) {
 				discl.log("Error executing script " + script + ": " + error, "Bootloader");
 			}
-			executedScripts.push(script);
+			discl.scripts[script].executed = true;
 			discl.log("Executed script " + script, "Bootloader");
-			discl.resetExportRequire();
+			discl.resetExport();
 		});
+		discl.executed = true;
 	}
+
+	discl
+		.webserverFetch("/scripts/render")
+		.then((response) => {
+			return response.json();
+		})
+		.then((scripts) => {
+			discl.log("Fetched scripts", "Bootloader");
+			executeScripts(scripts);
+		})
+		.catch((error) => {
+			discl.log("Error fetching scripts: " + error, "Bootloader");
+		});
+
 
 	function loaded() {
 		discl.log("Loaded", "Bootloader");
@@ -75,18 +59,5 @@ if (document.title === "Discord Updater") {
 			})()
 		);
 		wordmark.style.fontSize = "1em";
-
-		discl
-			.webserverFetch("/scripts/render")
-			.then((response) => {
-				return response.json();
-			})
-			.then((scripts) => {
-				discl.log("Fetched scripts", "Bootloader");
-				executeScripts(scripts);
-			})
-			.catch((error) => {
-				discl.log("Error fetching scripts: " + error, "Bootloader");
-			});
 	}
 }
