@@ -33,6 +33,7 @@ class UI {
 				bottom: 10px;
 				right: 10px;
 				z-index: 2;
+				pointer-events: none;
 			}
 			
 			.discl-toast {
