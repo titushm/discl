@@ -25,7 +25,6 @@ class GatewayHandler {
 			if (info.opcode === 1) {
 				switch (data.opcode) {
 					case 1:
-						console.log("Received message", payload);
 						for (const callback of this.messageCallbacks) {
 							if (callback.filter && callback.filter !== payload.t) continue;
 							callback.callback(payload);
