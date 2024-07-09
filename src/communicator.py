@@ -86,7 +86,7 @@ class Communicator():
 					if (discl.scripts.hasOwnProperty(name)) {{
 						if (discl.scripts[name].export === null) {{
 							console.log(discl.scripts[name].export)
-							const error = new Error(name + " does not have an export.");
+							const error = new Error(name + " does not have an export. This may be due to the script not having the correct dependencies.");
 							error.name = "EXPORT_NOT_FOUND";
 							throw error;
 						}}
@@ -118,8 +118,8 @@ class Communicator():
 				discl.request_token = "{self.initial_request_token}";
 				discl.gateway = {{}};
 				discl.webserverFetch = function(endpoint, method, options = {{}}) {{
-					const {{ promisify }} = require("util");
-					const request = promisify(require(process.cwd() + "/app.asar/node_modules/request"));
+					const {{ promisify }} = discl.nodeRequire("util");
+					const request = promisify(discl.nodeRequire(process.cwd() + "/app.asar/node_modules/request"));
 					options.headers = options.headers || {{}};
 					options.headers["Authorization"] = discl.request_token;
 
@@ -148,7 +148,7 @@ class Communicator():
 				discl.require = (name) => {{
 					if (discl.scripts.hasOwnProperty(name)) {{
 						if (discl.scripts[name].export == null) {{
-							const error = new Error(name + " does not have an export.");
+							const error = new Error(name + " does not have an export. This may be due to the script not having the correct dependencies.");
 							error.name = "EXPORT_NOT_FOUND";
 							throw error;
 						}}

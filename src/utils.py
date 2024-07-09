@@ -13,7 +13,7 @@ import erlpack
 
 colorama.init()
 ntdll = ctypes.WinDLL("ntdll")
-SCRIPT_CONFIG_PROPERTIES = ["name", "author", "version", "description", "context"]
+SCRIPT_CONFIG_PROPERTIES = ["name", "author", "version", "description", {"context": ["before_bootloader", "on_render_load"]}, "dependencies"]
 PATTERN = r"@(\w+):\s*([^\\\/\r\n]+)"
 
 class Process():
@@ -122,8 +122,16 @@ class Utils():
 						return {"success": False, "error": f"Failed to parse script config for {script_path}"}
 			script_properties = json_config.keys()
 			for property in SCRIPT_CONFIG_PROPERTIES:
-				if (property not in script_properties):
-					return {"success": False, "error": "Script config did not include required property: " + property}
+				if (isinstance(property, dict)):
+					for key in property:
+						if (key not in json_config):
+							return {"success": False, "error": f"Missing property {key} in script config for {script_path}"}
+						for sub_property in property[key]:
+							if (sub_property not in json_config[key]):
+								return {"success": False, "error": f"Missing property {sub_property} in script config for {script_path}"}
+				else:
+					if (property not in script_properties):
+						return {"success": False, "error": f"Missing property {property} in script config for {script_path}"}
 			return {"success": True, "config": json_config}
 
 			

@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: ""
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False}
+// @context: {"context": "render", "before_bootloader": False, "on_render_load": False}
 // @dependencies: ["Hooks.js"]
 // ==/Discl-Script==
 

@@ -27,7 +27,11 @@ if (document.title === "Discord Updater") {
 		discl.executed = true;
 	}
 
-	discl
+
+
+	function loaded() {
+		discl.log("Loaded", "Bootloader");
+		discl
 		.webserverFetch("/scripts/render")
 		.then((response) => {
 			return response.json();
@@ -39,10 +43,7 @@ if (document.title === "Discord Updater") {
 		.catch((error) => {
 			discl.log("Error fetching scripts: " + error, "Bootloader");
 		});
-
-
-	function loaded() {
-		discl.log("Loaded", "Bootloader");
+		
 		let wordmark = document.querySelector("[class^='wordmark']");
 		wordmark.appendChild(
 			(() => {

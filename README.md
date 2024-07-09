@@ -29,7 +29,7 @@ Betterdiscord hasnt been tested but most likley will work with discl.
 > New builtin gateway module to view the discord gateway websocket.
 
 # Todo
-- [ ] Graphics library.
+- [ ] UI library.
 - [ ] Fix youtube embeds just not loading
 - [ ] Better installer using wpf
 - [ ] finish storage system

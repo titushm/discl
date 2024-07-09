@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Hooks for Discord features"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False}
+// @context: {"context": "render", "before_bootloader": False, "on_render_load": False}
 // @dependencies: []
 // ==/Discl-Script==
 

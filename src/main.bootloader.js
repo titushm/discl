@@ -12,10 +12,10 @@ dialog.showErrorBox = function (title, content) {
 };
 
 discl.log("Loaded", "Bootloader");
-let onLoadedScripts = {};
+
 function executeScripts(scripts) {
 	// Dont console.log here, it blocks otherwise (I actually have zero idea why)
-	discl.log("Executing scripts " + discl.scripts, "Bootloader");
+	discl.log("Executing scripts", "Bootloader");
 	Object.assign(discl.scripts, scripts);
 	Object.keys(discl.scripts).forEach((script) => {
 		if (discl.scripts[script].executed) return;
@@ -39,23 +39,28 @@ function executeScripts(scripts) {
 
 function waitForLoad() {
 	const windows = BrowserWindow.getAllWindows();
-	if (windows.length === 0) {
+	const url = windows[0].webContents.mainFrame.url;
+	if (windows.length === 0 || url.startsWith("https://discord.com/app?_=") || url === "https://discord.com/login") {
 		setTimeout(waitForLoad, 100);
 		return;
 	}
-	const window = windows[0];
-	const webContents = window.webContents;
-	if (webContents.mainFrame.url.startsWith("https://discord.com/app?_=")) {
-		setTimeout(waitForLoad, 100);
-		return;
-	}
-	const renderDiscl = webContents.executeJavaScript(`discl`);
+	const renderDiscl = windows[0].webContents.executeJavaScript("discl");
 	if (!renderDiscl && !discl.executed) {
 		setTimeout(waitForLoad, 100);
 		return;
 	}
-	webContents.executeJavaScript(`loaded();`);
-	executeScripts(onLoadedScripts); //TODO: timing thing
+	windows[0].webContents.executeJavaScript(`loaded();`);
+	discl
+	.webserverFetch("/scripts/main?on_render_load=true", "GET")
+	.then((response) => {
+		// Dont console.log here, it blocks otherwise (I actually have zero idea why)
+		discl.log("Fetched onRenderLoad scripts", "Bootloader");
+		const scripts = response.body;
+		executeScripts(scripts);
+	})
+	.catch((error) => {
+		discl.log("Error fetching onRenderLoad scripts: " + error, "Bootloader");
+	});
 
 }
 discl.log("Waiting for load...", "Bootloader");
@@ -65,15 +70,7 @@ discl
 	.then((response) => {
 		// Dont console.log here, it blocks otherwise (I actually have zero idea why)
 		discl.log("Fetched scripts", "Bootloader");
-		let scripts = {};
-		const onLoadedScriptKeys = Object.keys(response.body).filter((script) => response.body[script].context.on_loaded);
-		const scriptKeys = Object.keys(response.body).filter((script) => !response.body[script].context.before_bootloader);
-		for (const key of scriptKeys) {
-			scripts[key] = response.body[key];
-		}
-		for (const key of onLoadedScriptKeys) {
-			onLoadedScripts[key] = response.body[key];
-		}
+		const scripts = response.body;
 		executeScripts(scripts);
 		waitForLoad();
 	})

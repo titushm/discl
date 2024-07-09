@@ -12,6 +12,7 @@ import graphlib
 import json
 import base64
 import zlib
+import zstandard
 import erlpack
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
@@ -26,10 +27,9 @@ app.add_middleware(
 	allow_headers=["*"],
 )
 
-app.gateway_connections = {"host": None, "listeners": []}
-app.gateway_cache = bytearray()
-app.decompressor = zlib.decompressobj()
-app.gateway_encoding = None
+app.relay_connections = []
+app.gateway = {"encoding": None, "compression": None, "cache": bytearray(), "decompressor": None}
+
 config = utils.get_config()
 SCRIPT_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\scripts"))
 SCRIPT_STORAGE_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\storage"))
@@ -62,7 +62,7 @@ def order_scripts(scripts, context):
 			utils.log(f"Script {script_name} not found in scripts for the current context. Ignoring", colorama.Fore.YELLOW)
 	return sorted_scripts
 
-def get_scripts(context, before_bootloader = False):
+def get_scripts(context, before_bootloader, onRenderLoad):
 	scripts = {}
 	script_filenames = list(SCRIPT_PATH.glob("*.js"))
 	for script_name in script_filenames:
@@ -70,12 +70,12 @@ def get_scripts(context, before_bootloader = False):
 		if (not response["success"]):
 			utils.log(response["error"], colorama.Fore.RED)
 			continue
-		if ((response["config"]["context"]["context"] == context or response["config"]["context"]["context"] == "common") and (response["config"]["context"]["before_bootloader"] == before_bootloader or context == "render")):
+		if ((response["config"]["context"]["context"] == context or response["config"]["context"]["context"] == "common") and (response["config"]["context"]["before_bootloader"] == before_bootloader or context == "render") and (response["config"]["context"]["on_render_load"] == onRenderLoad or context == "render")):
 			scripts[script_name.name] = response["config"]
 			scripts[script_name.name]["code"] = get_script(script_name.name)
 	return scripts
 
-script_dependencies_cache = {"render": get_scripts("render"), "main": get_scripts("main")}
+script_dependencies_cache = {"render": get_scripts("render", False, False), "main": get_scripts("main", False, False)}
 
 @app.middleware("http")
 async def intercept_request(request: Request, call_next):
@@ -87,69 +87,75 @@ async def intercept_request(request: Request, call_next):
 	response = await call_next(request)
 	return response
 
-@app.websocket("/gateway/relay/{client_type}")
-async def gateway_relay(websocket: WebSocket, client_type: str):
+@app.websocket("/relay/ws")
+async def relay(websocket: WebSocket):
 	await websocket.accept()
-	if (client_type == "host"):
-		app.gateway_connections["host"] = websocket
-		utils.log("Host connected", colorama.Fore.CYAN)
-	elif (client_type == "listener"):
-		app.gateway_connections["listeners"].append(websocket)
-		utils.log("Listener connected", colorama.Fore.CYAN)
+	app.relay_connections.append(websocket)
 
-	else:
-		await websocket.close()
-	
 	while True:
 		data = await websocket.receive_text()
 		json_data = json.loads(data)
-		opcode = json_data["op"]
-		match opcode:
-			case 0:
-				url = json_data["data"]["url"]
-				parsed_url = urlparse(url)
-				query = parse_qs(parsed_url.query)
-				app.gateway_encoding = query["encoding"][0]
-				app.gateway_compression = query["compress"][0]
-
+		top_opcode = json_data["opcode"]
+		match top_opcode:
 			case 1:
-				payload = base64.b64decode(json_data["data"]["response"]["payloadData"])
-				app.gateway_cache.extend(payload)
-				if (payload.endswith(b"\x00\x00\xff\xff") and len(app.gateway_cache) > 4): #TODO: Test that this still works when no compression or json encoding.
-					if (app.gateway_compression == "zlib-stream"):
-						try:
-							payload = app.decompressor.decompress(app.gateway_cache)
-						except zlib.error as e:
-							utils.log("Failed to decompress payload: " + str(e) , colorama.Fore.RED)
-							app.gateway_cache.clear()
-							continue
-					app.gateway_cache.clear()
-					if (app.gateway_encoding == "etf"):
-						payload = erlpack.unpack(payload)
+				opcode = json_data["data"]["opcode"]
+				match opcode:
+					case 0:
+						url = json_data["data"]["data"]["url"]
+						parsed_url = urlparse(url)
+						query = parse_qs(parsed_url.query)
+						app.gateway["encoding"] = query["encoding"][0]
+						app.gateway["compression"] = query["compress"][0]
+						if (app.gateway["compression"] == "zlib-stream"):
+							app.gateway["decompressor"] = zlib.decompressobj()
+						elif (app.gateway["compression"] == "zstd-stream"):
+							decompressor  = zstandard.ZstdDecompressor()
+							app.gateway["decompressor"] = decompressor.decompressobj()
+						continue
+					
+					case 1:
+						payload = base64.b64decode(json_data["data"]["data"]["response"]["payloadData"])
+						app.gateway["cache"].extend(payload)
+						if (app.gateway["compression"] == "zlib-stream" and (payload.endswith(b"\x00\x00\xff\xff") and len(app.gateway["cache"]) > 4)) or (app.gateway["compression"] == "zstd-stream"):
+							try:
+								payload = app.gateway["decompressor"].decompress(app.gateway["cache"])
+							except zlib.error as e:
+								utils.log("Failed to decompress payload: " + str(e), colorama.Fore.RED)
+								app.gateway["cache"].clear()
+								continue
 
-					for listener in app.gateway_connections["listeners"]:
-						if (listener.client_state == WebSocketState.CONNECTED):
-							serialized_payload = {"op": opcode,"payload": utils.serializable_term_json(payload)}
-							await listener.send_json(serialized_payload)
-						else:
-							app.gateway_connections["listeners"].remove(listener)
-			
-			case 2:
-				payload = base64.b64decode(json_data["data"]["response"]["payloadData"])
-				if (app.gateway_encoding == "etf"):
-						payload = erlpack.unpack(payload)
+							app.gateway["cache"].clear()
+							if (app.gateway["encoding"] == "etf"):
+								payload = erlpack.unpack(payload)
+							for listener in app.relay_connections:
+								if (listener.client_state == WebSocketState.CONNECTED and listener != websocket):
+									serialized_payload = {"opcode": top_opcode, "data": {"opcode": opcode, "payload": utils.serializable_term_json(payload)}}
+									await listener.send_text(json.dumps(serialized_payload))
+								else:
+									app.relay_connections.remove(listener)
+						continue
+					
+					case 2:
+						payload = base64.b64decode(json_data["data"]["data"]["response"]["payloadData"])
+						if (app.gateway["encoding"] == "etf"):
+							payload = erlpack.unpack(payload)
+						for listener in app.relay_connections:
+							if (listener.client_state == WebSocketState.CONNECTED and listener != websocket):
+								serialized_payload = {"opcode": top_opcode, "data": {"opcode": opcode, "payload": utils.serializable_term_json(payload)}}
+								await listener.send_text(json.dumps(serialized_payload))
+							else:
+								app.relay_connections.remove(listener)
+						continue
 
-				for listener in app.gateway_connections["listeners"]:
-					if (listener.client_state == WebSocketState.CONNECTED):
-						serialized_payload = {"op": opcode,"payload": utils.serializable_term_json(payload)}
-						await listener.send_json(serialized_payload)
+				for relay in app.relay_connections:
+					if (relay.client_state == WebSocketState.CONNECTED and relay != websocket):
+						await relay.send_text(data)
 					else:
-						app.gateway_connections["listeners"].remove(listener)
-
+						app.relay_connections.remove(relay)
 
 @app.get("/scripts/{context}", status_code=200)
-async def return_scripts(context: str, before_bootloader: bool = False):
-	scripts = get_scripts(context, before_bootloader)
+async def return_scripts(context: str, before_bootloader: bool = False, on_render_load: bool = False):
+	scripts = get_scripts(context, before_bootloader, on_render_load)
 	sorted_scripts = order_scripts(scripts, context)
 	return JSONResponse(content=sorted_scripts, status_code=200)
 

@@ -93,7 +93,7 @@ function bootloader() {
 	app.on("browser-window-created", async (e, window) => {
 		if (window.id === 2) {
 			discl.log("Browser window found", "BeforeBootloader");
-			const relaySocket = new WebSocket(`ws://127.0.0.1:${discl.config.ports.webserver}/gateway/relay/host`);
+			const relaySocket = new WebSocket(`ws://127.0.0.1:${discl.config.ports.webserver}/relay/ws`);
 			const _debugger = window.webContents.debugger;
 			_debugger.attach();
 			_debugger.on("message", (_event, method, params) => {
@@ -101,19 +101,19 @@ function bootloader() {
 					case "Network.webSocketCreated":
 						if (params.url.startsWith("wss://gateway.discord.gg")) {
 							discl.gateway.requestID = params.requestId;
-							relaySocket.send(JSON.stringify({ op: 0, data: params }));
+							relaySocket.send(JSON.stringify({ opcode: 1, data: {opcode: 0, data: params} }));
 						}
 						break;
 
 					case "Network.webSocketFrameReceived":
 						if (params.requestId === discl.gateway.requestID) {
-							relaySocket.send(JSON.stringify({ op: 1, data: params }));
+							relaySocket.send(JSON.stringify({ opcode: 1, data: {opcode: 1, data: params} }));
 						}
 						break;
 
 					case "Network.webSocketFrameSent":
 						if (params.requestId === discl.gateway.requestID) {
-							relaySocket.send(JSON.stringify({ op: 2, data: params }));
+							relaySocket.send(JSON.stringify({ opcode: 1, data: {opcode: 2, data: params} }));
 						}
 						break;
 				}
