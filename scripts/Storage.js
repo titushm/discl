@@ -9,11 +9,17 @@
 
 discl.log("Loaded", "Storage");
 
+function getLSDescriptor() {
+	const iframe = document.createElement("iframe");
+	document.head.append(iframe);
+	const descriptor = Object.getOwnPropertyDescriptor(iframe.contentWindow, "localStorage");
+	iframe.remove();
+	return descriptor;
+}
+const localStorage = getLSDescriptor().get.call(window);
 class Storage {
 	getConfig(script) {
-		//localstoratge i think
-		// const response = discl.webserverFetch("GET", `/storage/${discl.context}/${script}`, {}, (data) => {});
-		// return response;
+		
 	}
 
 	setConfig(script, config) {}

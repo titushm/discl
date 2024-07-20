@@ -22,7 +22,6 @@ class GatewayHandler {
 			const info = JSON.parse(event.data);
 			const data = info.data;
 			const payload = data.payload;
-			console.log(payload);
 			if (info.opcode === 1) {
 				switch (data.opcode) {
 					case 1:
