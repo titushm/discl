@@ -5,9 +5,11 @@ discl.warned = false;
 dialog.showErrorBox = function (title, content) {
 	if (content.includes("broken pipe") && !discl.warned) {
 		discl.warned = true;
-		dialog.showMessageBoxSync({ type: "error", title: "Discl closed", message: "Discl handler has been closed, discord will now exit" });
-		app.exit(0);
-		return;
+		dialog.showMessageBoxSync({ type: "error", title: "Discl closed", message: "The discl handler has been closed, discord will now exit" });
+		const exec = discl.nodeRequire("child_process").exec;
+		exec("taskkill /f /im Discord.exe", (err, stdout, stderr) => {});
+		exec("taskkill /f /im Update.exe", (err, stdout, stderr) => {});
+		process.exit(0);
 	}
 };
 
@@ -49,19 +51,26 @@ function waitForLoad() {
 		setTimeout(waitForLoad, 100);
 		return;
 	}
-	windows[0].webContents.executeJavaScript(`loaded();`);
-	discl
-	.webserverFetch("/scripts/main?on_render_load=true", "GET")
-	.then((response) => {
-		// Dont console.log here, it blocks otherwise (I actually have zero idea why)
-		discl.log("Fetched onRenderLoad scripts", "Bootloader");
-		const scripts = response.body;
-		executeScripts(scripts);
-	})
-	.catch((error) => {
-		discl.log("Error fetching onRenderLoad scripts: " + error, "Bootloader");
-	});
-
+	const interval = setInterval(() => {
+		discl.webserverFetch("/injection/state", "GET").then((response) => {
+			if (response.status === 200) {
+				clearInterval(interval);
+				discl.log("Injection state: " + response.body.state, "Bootloader");
+				windows[0].webContents.executeJavaScript(`loaded();`);
+				discl
+				.webserverFetch("/scripts/main?on_render_load=true", "GET")
+				.then((response) => {
+					// Dont console.log here, it blocks otherwise (I actually have zero idea why)
+					discl.log("Fetched onRenderLoad scripts", "Bootloader");
+					const scripts = response.body;
+					executeScripts(scripts);
+				})
+				.catch((error) => {
+					discl.log("Error fetching onRenderLoad scripts: " + error, "Bootloader");
+				});
+			}
+		});
+	}, 1000);
 }
 discl.log("Waiting for load...", "Bootloader");
 

@@ -14,8 +14,7 @@ import base64
 import zlib
 import zstandard
 import erlpack
-from urllib.parse import urlparse
-from urllib.parse import parse_qs
+from urllib.parse import urlparse, parse_qs
 
 app = FastAPI()
 injection_state = {"injected": False, "reason": None}
@@ -93,7 +92,10 @@ async def relay(websocket: WebSocket):
 	app.relay_connections.append(websocket)
 
 	while True:
-		data = await websocket.receive_text()
+		try:
+			data = await websocket.receive_text()
+		except WebSocketDisconnect:
+			break
 		json_data = json.loads(data)
 		top_opcode = json_data["opcode"]
 		match top_opcode:
@@ -212,4 +214,3 @@ class WebServer():
 		self.webserver_thread.daemon = True
 		self.webserver_thread.start()
 		utils.log(f"Started webserver on port {self.port}", colorama.Fore.CYAN)
-

@@ -2,6 +2,7 @@ if (document.title === "Discord Updater") {
 	discl.webserverFetch("/injection/failure", { method: "POST", body: JSON.stringify({ reason: "early_injection" }) });
 } else {
 	discl.webserverFetch("/injection/success", { method: "POST" });
+	discl.log("SUCCESAS", "Bootloader");
 
 	function executeScripts(scripts) {
 		discl.log("Executing scripts " + discl.scripts, "Bootloader");
@@ -26,8 +27,6 @@ if (document.title === "Discord Updater") {
 		});
 		discl.executed = true;
 	}
-
-
 
 	function loaded() {
 		discl.log("Loaded", "Bootloader");

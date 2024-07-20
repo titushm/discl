@@ -1,0 +1,6 @@
+ERROR:__main__:Uncaught exception
+Traceback (most recent call last):
+  File "C:\Users\titus\Repos\Github\discl\src\discl.py", line 57, in <module>
+    utils.log(f"Time taken to open discord: {end - start}s", colorama.Fore.CYAN)
+                                                   ^^^^^
+NameError: name 'start' is not defined

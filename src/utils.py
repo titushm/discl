@@ -1,8 +1,6 @@
 import colorama
 import datetime
 import ctypes
-from ctypes import wintypes
-import psutil
 import os
 import json
 import re
@@ -39,11 +37,6 @@ class Process():
 	def close_handle(self):
 		ctypes.windll.kernel32.CloseHandle(self.handle)
 		self._handle = None
-
-	def get_cmd_args(self):
-		cmd_line = psutil.Process(self.pid).cmdline()
-		return cmd_line
-		
 
 class Utils():
 	def __init__(self):
@@ -92,12 +85,12 @@ class Utils():
 		return tuple(map(int, (v.split("."))))
 
 	def get_processes(self, filter_name=None):
-		process_list = (wintypes.DWORD * 1024)()
-		process_count = wintypes.DWORD()
+		process_list = (ctypes.wintypes.DWORD * 1024)()
+		process_count = ctypes.wintypes.DWORD()
 		success = ctypes.windll.psapi.EnumProcesses(process_list, ctypes.sizeof(process_list), ctypes.byref(process_count))
 		if not success:
 			raise ctypes.WinError()
-		process_count = process_count.value // ctypes.sizeof(wintypes.DWORD)
+		process_count = process_count.value // ctypes.sizeof(ctypes.wintypes.DWORD)
 		process_list = process_list[:process_count]
 		process_list = map(lambda pid: Process(pid), process_list)
 		if (filter_name):
@@ -134,8 +127,4 @@ class Utils():
 						return {"success": False, "error": f"Missing property {property} in script config for {script_path}"}
 			return {"success": True, "config": json_config}
 
-			
-					
-
-		
 utils = Utils()

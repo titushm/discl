@@ -30,14 +30,15 @@ class Injector():
 		os._exit(0)
 
 	def cleanup_discord(self):
+		discord_processes = utils.get_processes("Discord.exe")[::-1]
 		try:
-			subprocess.call('taskkill /F /IM discord.exe', creationflags=subprocess.CREATE_NO_WINDOW)
+			for proc in discord_processes:
+				os.kill(proc.pid, 15) # 15 = SIGTERM
+				proc.close_handle()
 		except Exception as e:
 			utils.log_debug(e)
 			utils.log(f"Failed to kill discord processes", colorama.Fore.RED)
-
-		utils.log(f"Cleaned active discord processes", colorama.Fore.GREEN)
-
+		utils.log("Discord processes cleaned", colorama.Fore.GREEN)
 	def open_debug(self):
 		utils.log("Cleaning active discord processes", colorama.Fore.YELLOW)
 		self.cleanup_discord()
@@ -75,5 +76,3 @@ class Injector():
 			return False
 		utils.log("Successfully injected bootloader", colorama.Fore.GREEN)
 		return True
-		
-

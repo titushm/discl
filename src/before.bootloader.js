@@ -57,7 +57,10 @@ function bootloader() {
 	dialog.showErrorBox = function (title, content) {
 		if (content.includes("broken pipe") && !discl.warned) {
 			discl.warned = true;
-			dialog.showMessageBoxSync({ type: "error", title: "Discl closed", message: "Discl has been closed, discord will now exit" });
+			dialog.showMessageBoxSync({ type: "error", title: "Discl closed", message: "The discl handler has been closed, discord will now exit" });
+			const exec = discl.nodeRequire("child_process").exec;
+			exec("taskkill /f /im Discord.exe", (err, stdout, stderr) => {});
+			exec("taskkill /f /im Update.exe", (err, stdout, stderr) => {});
 			process.exit(0);
 		}
 	};
