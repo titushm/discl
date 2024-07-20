@@ -30,6 +30,6 @@ Betterdiscord hasnt been tested but most likley will work with discl.
 
 # Todo
 - [ ] UI library ( started ).
-- [ ] Fix youtube embeds just not loading
-- [ ] Better installer using wpf
+- [x] Fix youtube embeds just not loading
+- [x] Better installer using wpf
 - [ ] finish storage system
