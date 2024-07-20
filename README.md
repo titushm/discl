@@ -33,3 +33,6 @@ Betterdiscord hasnt been tested but most likley will work with discl.
 - [x] Fix youtube embeds just not loading
 - [x] Better installer using wpf
 - [ ] finish storage system
+- [ ] Full intercept and modify support for http requests
+- [ ] Full intercept and modify support for websocket messages
+- [ ] message logger
