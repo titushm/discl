@@ -11,8 +11,9 @@ discl.log("Loaded", "Storage");
 
 class Storage {
 	getConfig(script) {
-		const response = discl.webserverFetch("GET", `/storage/${discl.context}/${script}`, {}, (data) => {});
-		return response;
+		//localstoratge i think
+		// const response = discl.webserverFetch("GET", `/storage/${discl.context}/${script}`, {}, (data) => {});
+		// return response;
 	}
 
 	setConfig(script, config) {}

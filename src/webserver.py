@@ -161,22 +161,6 @@ async def return_scripts(context: str, before_bootloader: bool = False, on_rende
 	sorted_scripts = order_scripts(scripts, context)
 	return JSONResponse(content=sorted_scripts, status_code=200)
 
-@app.get("/storage/{context}/{script}", status_code=200)
-async def get_script_storage(context: str, script: str):
-	if (not SCRIPT_STORAGE_PATH.joinpath(context + script).exists()):
-		config = open(SCRIPT_STORAGE_PATH.joinpath(context + script), "w")
-		config.write("{}")
-		config.close()
-		with open(SCRIPT_STORAGE_PATH.joinpath(context + script), "r") as f:
-			return JSONResponse(content=f.read(), status_code=200)
-
-@app.post("/storage/{context}/{script}", status_code=200)
-async def set_script_storage(context: str, script: str, request: Request):
-	content = await request.body()
-	with open(SCRIPT_STORAGE_PATH.joinpath(context + script), "w") as f:
-		f.write(content.decode())
-	return Response(status_code=200)
-
 @app.get("/injection/state", status_code=200)
 async def get_injection_state():
 	if (not app.injection_state["injected"]):
