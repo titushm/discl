@@ -53,7 +53,8 @@ function waitForLoad() {
 	}
 	const interval = setInterval(() => {
 		discl.webserverFetch("/injection/state", "GET").then((response) => {
-			if (response.status === 200) {
+			const status = response.body;
+			if (status.injected || status.status === 200) {
 				clearInterval(interval);
 				discl.log("Injection state: " + response.body.state, "Bootloader");
 				windows[0].webContents.executeJavaScript(`loaded();`);

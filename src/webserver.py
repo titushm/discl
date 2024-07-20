@@ -15,9 +15,9 @@ import zlib
 import zstandard
 import erlpack
 from urllib.parse import urlparse, parse_qs
+import ctypes
 
 app = FastAPI()
-injection_state = {"injected": False, "reason": None}
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=["https://discord.com", "http://discord.com"],
@@ -28,7 +28,7 @@ app.add_middleware(
 
 app.relay_connections = []
 app.gateway = {"encoding": None, "compression": None, "cache": bytearray(), "decompressor": None}
-
+app.injection_state = {"injected": False, "reason": None}
 config = utils.get_config()
 SCRIPT_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\scripts"))
 SCRIPT_STORAGE_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\storage"))
@@ -179,28 +179,22 @@ async def set_script_storage(context: str, script: str, request: Request):
 
 @app.get("/injection/state", status_code=200)
 async def get_injection_state():
-	global injection_state
-	old_state = injection_state.copy()
-	injection_state["injected"] = False
-	injection_state["reason"] = None
-	if (old_state["injected"]):
-		return JSONResponse(content=old_state, status_code=200)
+	if (not app.injection_state["injected"]):
+		return JSONResponse(content=app.injection_state, status_code=500)
+	else:
+		return JSONResponse(content=app.injection_state, status_code=200)
 	
-	return JSONResponse(content=old_state, status_code=500)
-
 @app.post("/injection/success", status_code=200)
 async def post_injection_success():
-	global injection_state
 	utils.log("Injection success received", colorama.Fore.CYAN)
-	injection_state["injected"] = True
+	app.injection_state["injected"] = True
 	return Response(status_code=200)
 
 @app.post("/injection/failure", status_code=200)
 async def post_injection_failure(request: Request):
-	global injection_state
 	reason = (await request.json())["reason"]
 	utils.log("Bootloader failed to inject: " + reason, colorama.Fore.CYAN)
-	injection_state["reason"] = reason
+	app.injection_state["reason"] = reason
 	return Response(status_code=200)
 
 class WebServer():
@@ -208,6 +202,7 @@ class WebServer():
 		self.port = port
 		self.webserver_thread = None
 		app.request_token = request_token
+
 
 	def start(self):
 		self.webserver_thread = threading.Thread(target=uvicorn.run, args=(app,), kwargs={"host": "0.0.0.0", "port": self.port, "log_level": "error"})

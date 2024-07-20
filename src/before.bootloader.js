@@ -125,13 +125,6 @@ function bootloader() {
 			window.on("closed", () => {
 				_debugger.detach();
 			});
-
-			await _debugger.sendCommand("Network.enable");
-			await _debugger.sendCommand("Target.setAutoAttach", {
-				autoAttach: true,
-				waitForDebuggerOnStart: true,
-				flatten: true
-			});
 		}
 	});
 }

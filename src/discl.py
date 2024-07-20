@@ -1,6 +1,7 @@
 import time
 import sys
 import logging
+import os
 
 def log_unhandled_exception(exc_type, exc_value, exc_traceback):
 	if issubclass(exc_type, KeyboardInterrupt):
@@ -13,7 +14,6 @@ def log_unhandled_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = log_unhandled_exception
 
 import time
-import os
 from pathlib import Path
 import colorama
 from utils import utils
@@ -21,7 +21,13 @@ from utils import utils
 if sys.platform != "win32":
 	raise NotImplementedError("Discl is not yet supported on non-windows platforms. Please visit the GitHub page for more information.")
 
-utils.debug() #TODO: Remove this line before release
+try:
+	with open("CONIN$"):
+		utils.debug()
+		pass
+except:
+	sys.stdout = open(os.devnull, "w")
+	sys.stderr = open(os.devnull, "w")
 
 DISCORD_APPDATA_PATH = Path(os.getenv("LOCALAPPDATA") + "\\Discord")
 if not DISCORD_APPDATA_PATH.exists():
