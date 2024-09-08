@@ -66,7 +66,6 @@ for i in range(0, RETRIES):
 		from webserver import WebServer #TODO: Webserver imports take half a second find a way to reduce
 		server = WebServer(WEBSERVER_PORT, REQUEST_TOKEN)
 		server.start()
-
 	success = discord_injector.inject()
 	if (success):
 		utils.log("Discl successfully injected into Discord", colorama.Fore.GREEN)

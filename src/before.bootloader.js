@@ -7,6 +7,7 @@ if (!isReady) {
 } else {
 	bootloader();
 }
+
 function bootloader() {
 	var { dialog, BrowserWindow, net } = discl.nodeRequire("electron");
 

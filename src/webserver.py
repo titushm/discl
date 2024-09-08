@@ -15,7 +15,6 @@ import zlib
 import zstandard
 import erlpack
 from urllib.parse import urlparse, parse_qs
-import ctypes
 
 app = FastAPI()
 app.add_middleware(

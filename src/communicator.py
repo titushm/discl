@@ -109,7 +109,7 @@ class Communicator():
 				discl.log("Discl object injected", "Injector");
 			"""
 		elif (context == "main"):
-					code = f"""
+			code = f"""
 				process.chdir(process.resourcesPath);
 				const discl = {{}};
 				discl.context = "{context}";
@@ -171,14 +171,13 @@ class Communicator():
 				discl.log("Discl object injected", "Injector");
 			"""
 		response = self._run_code(socket, code)
-		utils.log_debug("discl object response: " + response)
+		utils.log_debug("discl object response: " + str(response))
 
 	def inject_before_bootloader(self, before_bootloader_path):
 		before_bootloader = open(before_bootloader_path, "r").read()
 		self.inject_discl_object(self.main_socket, "main")
 
 		response = self._run_code(self.main_socket, before_bootloader)
-		return True
 		utils.log_debug("before main response: " + response)
 		if (not response):
 			return False

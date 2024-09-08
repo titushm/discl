@@ -3,5 +3,5 @@ colorama>=0.4.6
 websockets>=12.0
 fastapi>=0.108.0
 uvicorn>=0.25.0
-erlpack>=1.0.0
 zstandard>=0.22.0
+pure-py-erlpack>=1.0.0

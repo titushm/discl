@@ -3,8 +3,9 @@ from utils import utils
 import subprocess
 import os
 import time
-import threading
 from communicator import Communicator
+import io
+import threading
 
 class Injector():
 	def __init__(self, process_path, render_port, main_port, request_token):
@@ -17,12 +18,9 @@ class Injector():
 		self.main_socket_url = None
 
 	def _hook_debug_log(self):
-		while (True):
-			time.sleep(0.1)
-			line = self.discord_process.stdout.readline().decode("utf-8").strip()
+		for line in io.TextIOWrapper(self.discord_process.stdout, encoding="utf-8"):
 			if ("Debugger listening on" in line):
 				self.main_socket_url = line.split("Debugger listening on")[1].strip()
-
 			elif ("Waiting for the debugger to disconnect..." in line) or ("webContents.destroyed web2" in line):
 				utils.log("Discord process closed", colorama.Fore.YELLOW)
 				self.cleanup_discord()
@@ -39,6 +37,7 @@ class Injector():
 			utils.log_debug(e)
 			utils.log(f"Failed to kill discord processes", colorama.Fore.RED)
 		utils.log("Discord processes cleaned", colorama.Fore.GREEN)
+
 	def open_debug(self):
 		utils.log("Cleaning active discord processes", colorama.Fore.YELLOW)
 		self.cleanup_discord()
