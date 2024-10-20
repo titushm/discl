@@ -11,11 +11,9 @@ if (!isReady) {
 function bootloader() {
 	var { dialog, BrowserWindow, net } = discl.nodeRequire("electron");
 
-	const WebSocket = discl.nodeRequire("ws");
-
 	function executeScripts(scripts) {
 		// Dont console.log here, it blocks otherwise (I actually have zero idea why)
-		discl.scripts = scripts;
+		discl.scripts = { ...discl.scripts, ...scripts };
 		Object.keys(discl.scripts).forEach((script) => {
 			if (discl.scripts[script].executed) return;
 			discl.scripts[script].export = null;
@@ -97,6 +95,7 @@ function bootloader() {
 	app.on("browser-window-created", async (e, window) => {
 		if (window.id === 2) {
 			discl.log("Browser window found", "BeforeBootloader");
+			return; // This is disabled temporarily as websocket has been removed from discord //TODO: Re-enable this
 			const relaySocket = new WebSocket(`ws://127.0.0.1:${discl.config.ports.webserver}/relay/ws`);
 			const _debugger = window.webContents.debugger;
 			_debugger.attach();

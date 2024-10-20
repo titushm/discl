@@ -11,7 +11,7 @@ import erlpack
 
 colorama.init()
 ntdll = ctypes.WinDLL("ntdll")
-SCRIPT_CONFIG_PROPERTIES = ["name", "author", "version", "description", {"context": ["before_bootloader", "on_render_load"]}, "dependencies"]
+SCRIPT_CONFIG_PROPERTIES = ["name", "author", "version", "description", {"context": ["before_bootloader", "preload"]}, "dependencies"]
 PATTERN = r"@(\w+):\s*([^\\\/\r\n]+)"
 
 class Process():

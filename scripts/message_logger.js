@@ -3,12 +3,13 @@
 // @version: 1.0
 // @description: "See deleted messages"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "on_render_load": False}
-// @dependencies: []
+// @context: {"context": "render", "before_bootloader": False, "preload": False}
+// @dependencies: ["Storage.js"]
 // ==/Discl-Script==
 
 const gatewayHandler = discl.require("GatewayHandler.js");
-
+const Storage = discl.require("Storage.js");
+const storage = new Storage("message_logger");
 discl.log("Loaded", "Message Logger");
 const deleted_ids = [];
 
@@ -16,7 +17,14 @@ gatewayHandler.onMessage((payload) => {
 	const data = payload.d;
 	const id = "chat-messages-" + data.channel_id.toString() + "-" + data.id.toString();
 	deleted_ids.push(id);
-	discl.log("Deleted message: " + data.id); // Just proof of concept
+	discl.log("Deleted message: " + data.id); //TODO: Just proof of concept
+	config = storage.get();
+	if (!config.hasOwnProperty("deleted_messages")) {
+		config.deleted_messages = [];
+	}
+	config.deleted_messages.push(id);
+	storage.set(config);
+
 }, "MESSAGE_DELETE");
 
 // gatewayHandler.onMessage((payload) => {

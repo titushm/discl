@@ -69,9 +69,11 @@ class Communicator():
 		if (context == "render"):
 			code = f"""
 				const discl = {{}};
+				discl.loaded = false;
 				discl.context = "{context}";
 				discl.config = {json.dumps(config)};
 				discl.executed = false;
+				discl.onRenderLoadCallbacks = [];
 				discl.request_token = "{self.initial_request_token}";
 				discl.webserverFetch = function(endpoint, options = {{}}) {{
 					options.headers = options.headers || {{}};
@@ -118,26 +120,34 @@ class Communicator():
 				discl.request_token = "{self.initial_request_token}";
 				discl.gateway = {{}};
 				discl.webserverFetch = function(endpoint, method, options = {{}}) {{
-					const {{ promisify }} = discl.nodeRequire("util");
-					const request = promisify(discl.nodeRequire(process.cwd() + "/app.asar/node_modules/request"));
+					
+					const http = discl.nodeRequire("http");
+					const url = new URL(`http://127.0.0.1:${{discl.config.ports.webserver}}${{endpoint}}`)
 					options.headers = options.headers || {{}};
 					options.headers["Authorization"] = discl.request_token;
 
 					const requestOptions = {{
+						hostname: url.hostname,
 						method: method.toLowerCase(),
-						uri: `http://127.0.0.1:${{discl.config.ports.webserver}}${{endpoint}}`,
+						port: url.port || 80,
+						path: url.pathname + url.search,
 						headers: options.headers,
-						json: true,
 						...options
 					}};
 					return new Promise((resolve, reject) => {{
-						request(requestOptions, function (error, response, body) {{
-						if (error) {{
-							reject(error);
-						}} else {{
-							resolve({{response, body}});
-						}}
+						const req = http.request(requestOptions, (res) => {{
+							let data = "";
+							res.on("data", (chunk) => {{
+								data += chunk;
+							}});
+							res.on("end", () => {{
+								resolve({{status: res.statusCode, body: JSON.parse(data)}});
+							}});
 						}});
+						req.on("error", (error) => {{
+							reject(error);
+						}});
+						req.end();
 					}});
 				}};
 

@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Handles the discord gateway sent and received messages"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "on_render_load": False}
+// @context: {"context": "render", "before_bootloader": False, "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 

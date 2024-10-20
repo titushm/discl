@@ -3,12 +3,11 @@
 // @version: 1.0
 // @description: "Blocks the discord science telemetry requests"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "on_render_load": False}
+// @context: {"context": "render", "before_bootloader": False, "preload": False}
 // @dependencies: ["Requests.js"]
 // ==/Discl-Script==
 
 discl.log("Loaded", "Block Science");
-
 const Requests = discl.require("Requests.js");
 const urlRegex = /https:\/\/discord\.com\/api\/v\d+\/science/;
 

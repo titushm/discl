@@ -1,30 +1,52 @@
 // ==Discl-Script==
-// @name: "GatewayHandler"
+// @name: "Storage"
 // @version: "builtin"
-// @description: "Handles the discord gateway sent and received messages"
+// @description: "Provides an api for scripts to store and retrieve data"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "on_render_load": False}
+// @context: {"context": "common", "before_bootloader": False, "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 
 discl.log("Loaded", "Storage");
 
-function getLSDescriptor() {
-	const iframe = document.createElement("iframe");
-	document.head.append(iframe);
-	const descriptor = Object.getOwnPropertyDescriptor(iframe.contentWindow, "localStorage");
-	iframe.remove();
-	return descriptor;
-}
-const localStorage = getLSDescriptor().get.call(window);
-class Storage {
-	getConfig(script) {
-		
+let storage;
+if (discl.context === "render") {
+
+	class Storage {
+		constructor(id) {
+			this.id = id;
+		}
+		get() {
+			return discl
+			.webserverFetch("/storage/get/" + this.id)
+			.then((response) => {
+				return response.json();
+			})
+		}
+	
+		set(config) {
+			discl
+			.webserverFetch("/storage/set/" + this.id, {
+				method: "POST",
+				body: JSON.stringify(config)
+			})
+		}		
 	}
+	discl.export(Storage);
 
-	setConfig(script, config) {}
+} else if (discl.context === "main") {
+	class Storage {
+		constructor(id) {
+			this.id = id;
+		}
+		get(script) {
+			return {} //TODO: Implement
+		}
+	
+		set(script, config) {
+			return //TODO: Implement
+		}
+	}
+	discl.export(Storage);
+
 }
-
-storage = new Storage();
-
-discl.export(storage);

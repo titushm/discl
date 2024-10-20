@@ -3,65 +3,161 @@
 // @version: "builtin"
 // @description: "Hooks for Discord features"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "on_render_load": False}
+// @context: {"context": "render", "before_bootloader": False, "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 
 discl.log("Loaded", "Hooks");
+		
+class Constants {
+	get localStorage() {
+		const iframe = document.createElement("iframe");
+		document.body.appendChild(iframe);
+		const localStorage = { ...iframe.contentWindow.localStorage };
+		document.body.removeChild(iframe);
+		return localStorage;
+	}
+
+	get userID() {
+		return JSON.parse(this.localStorage["user_id_cache"]);
+	}
+
+	get token() {
+		return (webpackChunkdiscord_app.push([
+			[""],
+			{},
+			(e) => {
+				m = [];
+				for (let c in e.c) m.push(e.c[c]);
+			}
+		]),
+		m)
+			.find((m) => m?.exports?.default?.getToken !== void 0)
+			.exports.default.getToken();
+	}
+	get settingsTitlePrefixes() {
+		return ["| User Settings", "| Family Centre"];
+	}
+}
+const constants = new Constants();
+
+class TitleChangeHook {
+	constructor() {
+		this.onTitleChangeCallbacks = [];
+		this.documentTitle = Object.getOwnPropertyDescriptor(Document.prototype, "title");
+		const self = this;
+		Object.defineProperty(document, "title", {
+			set: function(title) {
+				self.onTitleChangeCallbacks.forEach((callback) => {
+					callback(title);
+				});
+				self.documentTitle.set.call(document, title);
+			},
+			get: function() {
+				return self.documentTitle.get.call(document);
+			}
+		});
+	}
+	
+	onTitleChange(callback) {
+		this.onTitleChangeCallbacks.push(callback);
+	}
+
+	removeCallback(callback) {
+		this.onTitleChangeCallbacks = this.onTitleChangeCallbacks.filter((cb) => cb !== callback);
+	}
+}
+const titleChangeHook = new TitleChangeHook();
 
 class SettingsHook {
 	constructor() {
-		this.openCallbacks = [];
-		this.closeCallbacks = [];
-		this.settingsOpen = false;
-		this.openUserSettingsButton = document.querySelector("button[aria-label='User Settings']");
-		this.openCallback = this.openCallback.bind(this);
-		this.closeCallback = this.closeCallback.bind(this);
-		this.keydownCallback = this.keydownCallback.bind(this);
-		if (!this.openUserSettingsButton) {
-			discl.log("Failed to register hooks for settings", "Hooks");
-			return;
-		}
-		this.openUserSettingsButton.addEventListener("click", this.openCallback);
-	}
-
-	openCallback() {
-		this.settingsOpen = true;
-		setTimeout(() => {
-			this.closeUserSettingsButton = document.querySelector("div[aria-label='Close'][class^='closeButton']");
-			if (!this.closeUserSettingsButton) {
-				discl.log("Failed to register hooks for close settings", "Hooks");
-				return;
+		this.onSettingsOpenCallbacks = [];
+		this.onSettingsCloseCallbacks = [];
+		this.onSettingsTabChangeCallbacks = [];
+		titleChangeHook.onTitleChange((title) => {
+			if (title === "Incoming Call" || document.title === "Incoming Call") return; // Calls spam change the title back and forth, therefore we ignore it
+			if (constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix)) && !constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix))) {
+				this.onSettingsOpenCallbacks.forEach((callback) => {
+					callback();
+				});
+			} else if (constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix)) && !constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix))) {
+				this.onSettingsCloseCallbacks.forEach((callback) => {
+					callback();
+				});
+			} else if (constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix)) && constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix))) {
+				this.onSettingsTabChangeCallbacks.forEach((callback) => {
+					callback();
+				});
 			}
-			this.closeUserSettingsButton.addEventListener("click", this.closeCallback);
-			document.addEventListener("keydown", this.keydownCallback);
-			this.openCallbacks.forEach((callback) => {
-				callback();
-			});
-		}, 1000);
-	}
-
-	closeCallback() {
-		this.settingsOpen = false;
-		this.closeCallbacks.forEach((callback) => {
-			callback();
 		});
 	}
-
-	keydownCallback(e) {
-		if (e.key === "Escape" && this.settingsOpen) {
-			this.closeCallback();
-		}
+	
+	onSettingsOpen(callback) {
+		this.onSettingsOpenCallbacks.push(callback);
 	}
 
-	onOpen(callback) {
-		this.openCallbacks.push(callback);
+	onSettingsClose(callback) {
+		this.onSettingsCloseCallbacks.push(callback);
 	}
 
-	onClose(callback) {
-		this.closeCallbacks.push(callback);
+	onSettingsTabChange(callback) {
+		this.onSettingsTabChangeCallbacks.push(callback);
+	}
+
+	removeCallback(callback) {
+		this.onSettingsOpenCallbacks = this.onSettingsOpen.filter((cb) => cb !== callback);
+		this.onSettingsCloseCallbacks = this.onSettingsClose.filter((cb) => cb !== callback);
+		this.onSettingsTabChangeCallbacks = this.onSettingsTabChangeCallbacks.filter((cb) => cb !== callback);
+	}	
+}
+const settingsHook = new SettingsHook();
+
+class HTMLSetAttributeHook {
+	constructor() {
+		const self = this;
+		this.onHTMLSetAttributeCallbacks = [];
+		const setAttribute = document.documentElement.setAttribute;
+		document.documentElement.setAttribute = function(name, value) {
+			self.onHTMLSetAttributeCallbacks.forEach((callback) => {
+				value = callback(name, value) || value;
+			});
+			return setAttribute.call(this, name, value);
+		};
+	}
+	onHTMLSetAttribute(callback) {
+		this.onHTMLSetAttributeCallbacks.push(callback);
 	}
 }
+const htmlSetAttributeHook = new HTMLSetAttributeHook();
+
+
+class AppendChildHook {
+	constructor() {
+		const self = this;
+		this.onAppendChildCallbacks = [];
+		const appendChild = Element.prototype.appendChild;
+		Element.prototype.appendChild = function(child) {
+			self.onAppendChildCallbacks.forEach((callback) => {
+				callback(child);
+			});
+			return appendChild.call(this, child);
+		};
+	}
+	onAppendChild(callback) {
+		this.onAppendChildCallbacks.push(callback);
+	}
+}
+const appendChildHook = new AppendChildHook();
+
+class RenderLoadHook {
+	onRenderLoad(callback) {
+		discl.onRenderLoadCallbacks.push(callback);
+	}
+}
+
+const renderLoadHook = new RenderLoadHook();
+discl.export({ constants, titleChangeHook, settingsHook, htmlSetAttributeHook, appendChildHook, renderLoadHook });
+
 
 // class MessageHook {
 // 	constructor() {
@@ -126,36 +222,3 @@ class SettingsHook {
 // 	}
 // }
 
-class Constants {
-	get localStorage() {
-		const iframe = document.createElement("iframe");
-		document.body.appendChild(iframe);
-		const localStorage = { ...iframe.contentWindow.localStorage };
-		document.body.removeChild(iframe);
-		return localStorage;
-	}
-
-	get userID() {
-		return JSON.parse(this.localStorage["user_id_cache"]);
-	}
-
-	get token() {
-		return (webpackChunkdiscord_app.push([
-			[""],
-			{},
-			(e) => {
-				m = [];
-				for (let c in e.c) m.push(e.c[c]);
-			}
-		]),
-		m)
-			.find((m) => m?.exports?.default?.getToken !== void 0)
-			.exports.default.getToken();
-	}
-}
-
-const settingsHook = new SettingsHook();
-// const messageHook = new MessageHook();
-const constants = new Constants();
-
-discl.export({ settingsHook, constants });

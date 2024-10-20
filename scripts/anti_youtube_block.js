@@ -3,7 +3,7 @@
 // @version: 1.0
 // @description: "Allows copyrighted youtube videos to play directly in the embed"
 // @author: "TitusHM"
-// @context: {"context": "main", "before_bootloader": False, "on_render_load": False}
+// @context: {"context": "main", "before_bootloader": False, "preload": False}
 // @dependencies: ["Requests.js"]
 // ==/Discl-Script==
 

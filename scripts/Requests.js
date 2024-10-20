@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Used to intercept and modify requests"
 // @author: "TitusHM"
-// @context: {"context": "common", "before_bootloader": False, "on_render_load": False}
+// @context: {"context": "common", "before_bootloader": False, "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 
@@ -81,8 +81,7 @@ class requestEvent {
 	}
 
 	removeCallback(callback) {
-		const index = this.callbacks.onRequest.indexOf(callback);
-		this.callbacks.onRequest.splice(index, 1);
+		this.callbacks.onRequest = this.callbacks.onRequest.filter((cb) => cb !== callback);
 	}
 }
 

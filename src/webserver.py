@@ -29,8 +29,9 @@ app.relay_connections = []
 app.gateway = {"encoding": None, "compression": None, "cache": bytearray(), "decompressor": None}
 app.injection_state = {"injected": False, "reason": None}
 config = utils.get_config()
-SCRIPT_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\scripts"))
-SCRIPT_STORAGE_PATH = Path(os.path.join(os.path.dirname(__file__), "..\\storage"))
+MAIN_PATH = Path(os.path.dirname(os.path.dirname(__file__)))
+SCRIPT_PATH = MAIN_PATH.joinpath("scripts")
+SCRIPT_STORAGE_PATH = SCRIPT_PATH.joinpath("storage")
 
 def get_script(script_name):
 	with open(os.path.join(SCRIPT_PATH, script_name), "r") as f:
@@ -39,28 +40,34 @@ def get_script(script_name):
 def get_dependencies(script_config):
 	return script_config.get("dependencies", [])
 
-def order_scripts(scripts, context):
-	scripts_dependencies = {script: get_dependencies(scripts[script]) for script in scripts}
-	script_dependencies_cache[context] = scripts_dependencies
-	ts = graphlib.TopologicalSorter(scripts_dependencies)
-	sorted_script_names = list(ts.static_order())
-	sorted_scripts = {}
-	for script_name in sorted_script_names:
-		if script_name in scripts:
-			sorted_scripts[script_name] = scripts[script_name]
-		else:
-			found = False
-			for key in script_dependencies_cache:
-				if (script_name in script_dependencies_cache[key]):
-					found = True
-					
-			if (not found):
-				utils.log(f"Circular dependency detected for script {script_name}", colorama.Fore.RED)
-				return
-			utils.log(f"Script {script_name} not found in scripts for the current context. Ignoring", colorama.Fore.YELLOW)
-	return sorted_scripts
 
-def get_scripts(context, before_bootloader, onRenderLoad):
+def order_scripts(scripts, context):
+	try:
+		scripts_dependencies = {script: get_dependencies(scripts.get(script, [])) for script in scripts}
+		script_dependencies_cache[context] = scripts_dependencies
+		ts = graphlib.TopologicalSorter(scripts_dependencies)
+		sorted_script_names = list(ts.static_order())
+		sorted_scripts = {}
+		for script_name in sorted_script_names:
+			if script_name in scripts:
+				sorted_scripts[script_name] = scripts[script_name]
+			else:
+				found = False
+				for key, cache in script_dependencies_cache.items():
+					if script_name in cache:
+						found = True
+						break
+				if not found:
+					utils.log(f"Script {script_name} not found in any context. It might be a missing dependency or typo.", colorama.Fore.RED)
+					return None
+				utils.log(f"Script {script_name} not found in current context. Ignoring.", colorama.Fore.YELLOW)
+
+		return sorted_scripts
+	except graphlib.CycleError as e:
+		utils.log(f"Circular dependency detected: {e}", colorama.Fore.RED)
+		return None
+
+def get_scripts(context, before_bootloader, preload):
 	scripts = {}
 	script_filenames = list(SCRIPT_PATH.glob("*.js"))
 	for script_name in script_filenames:
@@ -68,12 +75,14 @@ def get_scripts(context, before_bootloader, onRenderLoad):
 		if (not response["success"]):
 			utils.log(response["error"], colorama.Fore.RED)
 			continue
-		if ((response["config"]["context"]["context"] == context or response["config"]["context"]["context"] == "common") and (response["config"]["context"]["before_bootloader"] == before_bootloader or context == "render") and (response["config"]["context"]["on_render_load"] == onRenderLoad or context == "render")):
+		if ((response["config"]["context"]["context"] == context or response["config"]["context"]["context"] == "common") and (response["config"]["context"]["before_bootloader"] == before_bootloader or context == "render") and (response["config"]["context"]["preload"] == preload)):
 			scripts[script_name.name] = response["config"]
 			scripts[script_name.name]["code"] = get_script(script_name.name)
 	return scripts
 
 script_dependencies_cache = {"render": get_scripts("render", False, False), "main": get_scripts("main", False, False)}
+script_dependencies_cache["render"].update(get_scripts("render", False, True))
+script_dependencies_cache["main"].update(get_scripts("main", False, True))
 
 @app.middleware("http")
 async def intercept_request(request: Request, call_next):
@@ -155,8 +164,8 @@ async def relay(websocket: WebSocket):
 						app.relay_connections.remove(relay)
 
 @app.get("/scripts/{context}", status_code=200)
-async def return_scripts(context: str, before_bootloader: bool = False, on_render_load: bool = False):
-	scripts = get_scripts(context, before_bootloader, on_render_load)
+async def return_scripts(context: str, before_bootloader: bool = False, preload: bool = False):
+	scripts = get_scripts(context, before_bootloader, preload)
 	sorted_scripts = order_scripts(scripts, context)
 	return JSONResponse(content=sorted_scripts, status_code=200)
 
@@ -179,6 +188,27 @@ async def post_injection_failure(request: Request):
 	utils.log("Bootloader failed to inject: " + reason, colorama.Fore.CYAN)
 	app.injection_state["reason"] = reason
 	return Response(status_code=200)
+
+
+@app.post("/storage/set/{script}", status_code=200)
+async def set_storage(request: Request, script: str):
+	with open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "w") as f:
+		try:
+			json.dump(await request.json(), f)
+		except:
+			return Response(status_code=400)
+	return Response(status_code=200)
+
+@app.get("/storage/get/{script}", status_code=200)
+async def get_storage(script: str):
+	if (not os.path.exists(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"))):
+		temp = open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "w")
+		temp.write("{}")
+		temp.close()
+	with open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "r") as f:
+		return JSONResponse(content=json.loads(f.read()), status_code=200)
+
+
 
 class WebServer():
 	def __init__(self, port, request_token):

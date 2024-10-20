@@ -18,7 +18,7 @@ discl.log("Loaded", "Bootloader");
 function executeScripts(scripts) {
 	// Dont console.log here, it blocks otherwise (I actually have zero idea why)
 	discl.log("Executing scripts", "Bootloader");
-	Object.assign(discl.scripts, scripts);
+	discl.scripts = { ...discl.scripts, ...scripts };
 	Object.keys(discl.scripts).forEach((script) => {
 		if (discl.scripts[script].executed) return;
 		discl.scripts[script].export = null;
@@ -59,26 +59,26 @@ function waitForLoad() {
 				discl.log("Injection state: " + response.body.state, "Bootloader");
 				windows[0].webContents.executeJavaScript(`loaded();`);
 				discl
-				.webserverFetch("/scripts/main?on_render_load=true", "GET")
+				.webserverFetch("/scripts/main?preload=true", "GET")
 				.then((response) => {
 					// Dont console.log here, it blocks otherwise (I actually have zero idea why)
-					discl.log("Fetched onRenderLoad scripts", "Bootloader");
+					discl.log("Fetched preload scripts", "Bootloader");
 					const scripts = response.body;
 					executeScripts(scripts);
 				})
 				.catch((error) => {
-					discl.log("Error fetching onRenderLoad scripts: " + error, "Bootloader");
+					discl.log("Error fetching preload scripts: " + error, "Bootloader");
 				});
 			}
 		});
-	}, 1000);
+	}, 100);
 }
 discl.log("Waiting for load...", "Bootloader");
 
 discl
 	.webserverFetch("/scripts/main", "GET")
 	.then((response) => {
-		// Dont console.log here, it blocks otherwise (I actually have zero idea why)
+		// Dont console.log here, it blocks otherwise (I actually have no idea why)
 		discl.log("Fetched scripts", "Bootloader");
 		const scripts = response.body;
 		executeScripts(scripts);
