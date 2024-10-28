@@ -17,7 +17,8 @@ const defaultFilters = {
 		checks: [
 			{"tagName": "A"},
 			{"href": "https://discord.com/shop"}
-		]
+		],
+		initialHide: "a[href='/shop']"
 	},
 	"HomeNitroButton": {
 		enabled: true,
@@ -25,23 +26,70 @@ const defaultFilters = {
 		checks: [
 			{"tagName": "A"},
 			{"href": "https://discord.com/store"}
-		]
+		],
+		initialHide: "a[href='/store']"
 	},
 	"ChatNitroGiftButton": {
 		enabled: true,
 		description: "Remove the nitro gift button in chat",
 		checks: [
 			{"tagName": "BUTTON"},
-			{"type": "button"},
 			{"ariaLabel": "Send a gift"}
 		]
 	},
+	"ChatGifButton": {
+		enabled: true,
+		description: "Remove the gif button in chat",
+		checks: [
+			{"tagName": "BUTTON"},
+			{"type": "button"},
+			{"ariaLabel": "Open GIF picker"}
+		]
+	},
+	"ChatStickerButton": {
+		enabled: true,
+		description: "Remove the sticker button in chat",
+		checks: [
+			{"tagName": "BUTTON"},
+			{"type": "button"},
+			{"ariaLabel": "Open sticker picker"}
+		]
+	},
+	"ChatAppsButton": {
+		enabled: true,
+		description: "Remove the apps button in chat",
+		checks: [
+			{"tagName": "BUTTON"},
+			{"type": "button"},
+			{"ariaLabel": "Apps"}
+		]
+	},
+	"HelpButton": {
+		enabled: true,
+		description: "Remove the help button",
+		checks: [
+			{"tagName": "DIV"},
+			{"role": "button"},
+			{"ariaLabel": "Help"}
+		],
+		initialHide: "a[href='https://support.discord.com']"
+	},
+	"InboxButton": {
+		enabled: true,
+		description: "Remove the help button",
+		checks: [
+			{"tagName": "DIV"},
+			{"role": "button"},
+			{"ariaLabel": "Inbox"}
+		],
+		initialHide: "div[aria-label='Inbox']"
+	}
 };
 
 const storage = new (discl.require("Storage.js"))("MarketingCleaner");
 storage.get().then((data) => {
 	if (Object.keys(data).length === 0) {
-		storage.set(filters);
+		storage.set(defaultFilters);
 		data = defaultFilters;
 	}
 	filters = data;
@@ -60,7 +108,7 @@ storage.get().then((data) => {
 	const resetButton = new ui.Button("Reset", () => {
 		storage.set(defaultFilters);
 		filters = defaultFilters;
-		ui.manager.showToast("Filters have been reset", "Marketing Cleaner");
+		ui.manager.showToast("Filters have been reset, restart discl for changes to take effect", "Marketing Cleaner");
 	}, "red");
 	content.push(resetSubtitle, resetButton);
 
@@ -88,15 +136,25 @@ storage.get().then((data) => {
 	hooks.renderLoadHook.onRenderLoad(() => {
 		const interval = setInterval(() => {
 			try {
-				document.querySelector("a[href='/store']").style.display = "none";
-				document.querySelector("a[href='/shop']").style.display = "none";
+				for (const filter of Object.values(filters)) {
+					if (!filter.enabled && !filter.hasOwnProperty("initialHide")) continue; 
+					const element = document.querySelector(filter.initialHide);
+					if (element) {
+						element.style.display = "none";
+					}
+				}
 				clearInterval(interval);
 				initialHide = true;
 			} catch {}
 		}, 100);
 	});
 	if (!initialHide && discl.loaded) {
-		document.querySelector("a[href='/store']").style.display = "none";
-		document.querySelector("a[href='/shop']").style.display = "none";
+		for (const filter of Object.values(filters)) {
+			if (!filter.enabled && !filter.hasOwnProperty("initialHide")) continue; 
+			const element = document.querySelector(filter.initialHide);
+			if (element) {
+				element.style.display = "none";
+			}
+		}
 	}
 });
