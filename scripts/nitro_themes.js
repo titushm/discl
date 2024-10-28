@@ -3,7 +3,7 @@
 // @version: 1.0
 // @description: "Allows you to use themes without nitro"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "preload": True}
+// @context: {"context": "render", "preload": True}
 // @dependencies: ["ScriptSettings.js", "UI.js", "Hooks.js", "Storage.js"]
 // ==/Discl-Script==
 

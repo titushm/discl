@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Used to intercept and modify requests"
 // @author: "TitusHM"
-// @context: {"context": "common", "before_bootloader": False, "preload": True}
+// @context: {"context": "common", "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 

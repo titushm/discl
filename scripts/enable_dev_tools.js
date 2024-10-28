@@ -3,7 +3,7 @@
 // @version: 1.0
 // @description: "Enables the dev tools for the discord client"
 // @author: "TitusHM"
-// @context: {"context": "main", "before_bootloader": False, "preload": True}
+// @context: {"context": "main", "preload": True}
 // @dependencies: ["UI.js"]
 // ==/Discl-Script==
 

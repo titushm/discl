@@ -16,9 +16,16 @@ if (document.title === "Discord Updater") {
 
 			try {
 				const func = new Function(discl.scripts[script].code);
-				(async () => func())();
+				(async () => {
+					try {
+						func();
+					} catch (error) {
+						discl.log("Error executing script " + script + ": " + error, "Bootloader");
+						discl.scripts[script].error = true;
+					}
+				})();
 			} catch (error) {
-				discl.log("Error executing script " + script + ": " + error, "Bootloader");
+				discl.log("Error defining or calling async function for script " + script + ": " + error, "Bootloader");
 			}
 			discl.scripts[script].executed = true;
 			discl.log("Executed script " + script, "Bootloader");
@@ -48,7 +55,7 @@ if (document.title === "Discord Updater") {
 	}
 }
 
-discl.log("Pre-Load", "Bootloader");
+discl.log("Preload", "Bootloader");
 discl
 .webserverFetch("/scripts/render?preload=true")
 .then((response) => {

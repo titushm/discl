@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Provides a way to access the internal modules Discord uses"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "preload": True}
+// @context: {"context": "render", "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 
@@ -39,7 +39,7 @@ class Modules {
 				if (typeof module.exports[className] !== "string") continue;
 				results.push({
 					className: module.exports[className],
-					element: document.querySelector(`.${module.exports[className]}`),
+					selectorClassName: module.exports[className].replace(/ /g, "."),
 					relatedClasses: moduleExportKeys,
 					id : module.id
 				});

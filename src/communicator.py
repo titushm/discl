@@ -116,6 +116,7 @@ class Communicator():
 				const discl = {{}};
 				discl.context = "{context}";
 				discl.nodeRequire = require;
+				discl.onRenderLoadCallbacks = [];
 				discl.config = {json.dumps(config)};
 				discl.request_token = "{self.initial_request_token}";
 				discl.gateway = {{}};

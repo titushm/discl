@@ -3,50 +3,51 @@
 // @version: 1.0
 // @description: "Removes discords marketing (Nitro, Shop)"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "preload": True}
+// @context: {"context": "render", "preload": True}
 // @dependencies: ["ScriptSettings.js", "UI.js", "Hooks.js", "Storage.js"]
 // ==/Discl-Script==
+
 discl.log("Loaded", "Marketing Cleaner");
 const scriptSettings = discl.require("ScriptSettings.js");
 const ui = discl.require("UI.js");
 const modules = discl.require("Modules.js");
 const defaultFilters = {
-	"HomeShopButton": {
+	"Home Shop Button": {
 		enabled: true,
-		description: "Remove the shop button on the home page",
+		description: "Removes the shop button on the home page",
 		checks: [
 			{"tagName": "A"},
 			{"href": "https://discord.com/shop"}
 		],
 		initialHide: "a[href='/shop']"
 	},
-	"HomeNitroButton": {
+	"Home Nitro Button": {
 		enabled: true,
-		description: "Remove the nitro button on the home page",
+		description: "Removes the nitro button on the home page",
 		checks: [
 			{"tagName": "A"},
 			{"href": "https://discord.com/store"}
 		],
 		initialHide: "a[href='/store']"
 	},
-	"ChatNitroGiftButton": {
+	"Chat Nitro Gift Button": {
 		enabled: true,
-		description: "Remove the nitro gift button in chat",
+		description: "Removes the nitro gift button in chat",
 		checks: [
 			{"tagName": "BUTTON"},
 			{"ariaLabel": "Send a gift"}
 		]
 	},
-	"ChatGifButton": {
+	"Chat Gif Button": {
 		enabled: true,
-		description: "Remove the gif button in chat",
+		description: "Removes the gif button in chat",
 		checks: [
 			{"tagName": "BUTTON"},
 			{"type": "button"},
 			{"ariaLabel": "Open GIF picker"}
 		]
 	},
-	"ChatStickerButton": {
+	"Chat Sticker Button": {
 		enabled: true,
 		description: "Remove the sticker button in chat",
 		checks: [
@@ -55,18 +56,18 @@ const defaultFilters = {
 			{"ariaLabel": "Open sticker picker"}
 		]
 	},
-	"ChatAppsButton": {
+	"Chat Apps Button": {
 		enabled: true,
-		description: "Remove the apps button in chat",
+		description: "Removes the apps button in chat",
 		checks: [
 			{"tagName": "BUTTON"},
 			{"type": "button"},
 			{"ariaLabel": "Apps"}
 		]
 	},
-	"HelpButton": {
+	"Help Button": {
 		enabled: true,
-		description: "Remove the help button",
+		description: "Removes the help button",
 		checks: [
 			{"tagName": "DIV"},
 			{"role": "button"},
@@ -74,9 +75,9 @@ const defaultFilters = {
 		],
 		initialHide: "a[href='https://support.discord.com']"
 	},
-	"InboxButton": {
+	"Inbox Button": {
 		enabled: true,
-		description: "Remove the help button",
+		description: "Removes the help button",
 		checks: [
 			{"tagName": "DIV"},
 			{"role": "button"},
@@ -97,20 +98,22 @@ storage.get().then((data) => {
 	const content = [title];
 	for (const key of Object.keys(filters)) {
 		const filter = filters[key];
-		const subtitle = new ui.SubTitle(filter.description);
+		const subtitle = new ui.SubTitle(key);
+		const description = new ui.Description(filter.description);
 		const toggleButton = new ui.ToggleButton((enabled) => {
 			filters[key].enabled = enabled;
 			storage.set(filters);
 		}, filter.enabled);
-		content.push(subtitle, toggleButton);
+		content.push(subtitle, description, toggleButton);
 	}
-	const resetSubtitle = new ui.SubTitle("Reset filter config (useful if this script is not behaving as expected)");
+	const resetSubtitle = new ui.SubTitle("Reset filter config");
+	const resetDescription = new ui.Description("Useful if this script is not behaving as expected");
 	const resetButton = new ui.Button("Reset", () => {
 		storage.set(defaultFilters);
 		filters = defaultFilters;
 		ui.manager.showToast("Filters have been reset, restart discl for changes to take effect", "Marketing Cleaner");
 	}, "red");
-	content.push(resetSubtitle, resetButton);
+	content.push(resetSubtitle, resetDescription, resetButton);
 
 	scriptSettings.addSetting("Marketing Cleaner", (new ui.Content(content))); //TODO: Finish system for setting content via method in UI called createSettingsPage ect.
 

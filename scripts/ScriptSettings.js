@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Provides an api to add settings to the settings menu"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "preload": True}
+// @context: {"context": "render", "preload": True}
 // @dependencies: ["Hooks.js", "UI.js", "Modules.js"]
 // ==/Discl-Script==
 
@@ -16,12 +16,12 @@ class ScriptSettings {
 		this.scriptSettings = {};
 		this.onSettingsRenderHooks = [];
 		hooks.settingsHook.onSettingsOpen(() => {
-			const settingsSide = modules.getPackedClassName("side").element;
+			const settingsSide = document.querySelector(`.${modules.getPackedClassName("side").selectorClassName}`);
 			const headerContainers = Array.from(settingsSide.children).filter((child) => child.tagName.toLowerCase() === "div" && child.getAttribute("class")?.startsWith("header"));
 			const disclHeader = headerContainers[0].cloneNode(true);
 			disclHeader.firstChild.textContent = "Discl Settings";
 			headerContainers[1].insertAdjacentElement("beforebegin", disclHeader);
-			const separator = modules.getPackedClassName("separator", ["themed", "selected"]).element.cloneNode(true);
+			const separator = document.querySelector(`.${modules.getPackedClassName("separator", ["themed", "selected"]).selectorClassName}`).cloneNode(true);
 			disclHeader.insertAdjacentElement("afterend", separator);
 			
 			Object.keys(this.scriptSettings).forEach(name => {
@@ -38,8 +38,8 @@ class ScriptSettings {
 					}
 					const content = this.scriptSettings[name];
 					contentColumn.appendChild(content);
-					const itemClassName = modules.getPackedClassName("item", ["themed", "selected"]).className;
-					const selectedClassName = modules.getPackedClassName("selected", ["themed", "item"]).className;
+					const itemClassName = modules.getPackedClassName("item", ["themed", "selected"]).selectorClassName;
+					const selectedClassName = modules.getPackedClassName("selected", ["themed", "item"]).selectorClassName;
 
 					document.querySelector(`.${itemClassName}.${selectedClassName}`)?.classList?.remove(selectedClassName);
 					document.querySelector(".discl-button.selected")?.classList?.remove("selected");

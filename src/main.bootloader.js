@@ -32,6 +32,7 @@ function executeScripts(scripts) {
 			(async () => func())();
 		} catch (error) {
 			discl.log("Error executing script " + script + ": " + error, "Bootloader");
+			discl.scripts[script].error = true;
 		}
 		discl.scripts[script].executed = true;
 		discl.log("Executed script " + script, "Bootloader");
@@ -58,16 +59,8 @@ function waitForLoad() {
 				clearInterval(interval);
 				discl.log("Injection state: " + response.body.state, "Bootloader");
 				windows[0].webContents.executeJavaScript(`loaded();`);
-				discl
-				.webserverFetch("/scripts/main?preload=true", "GET")
-				.then((response) => {
-					// Dont console.log here, it blocks otherwise (I actually have zero idea why)
-					discl.log("Fetched preload scripts", "Bootloader");
-					const scripts = response.body;
-					executeScripts(scripts);
-				})
-				.catch((error) => {
-					discl.log("Error fetching preload scripts: " + error, "Bootloader");
+				discl.onRenderLoadCallbacks.forEach((callback) => {
+					callback();
 				});
 			}
 		});

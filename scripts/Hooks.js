@@ -3,160 +3,170 @@
 // @version: "builtin"
 // @description: "Hooks for Discord features"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "preload": True}
+// @context: {"context": "common", "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 
 discl.log("Loaded", "Hooks");
+if (discl.context === "render") {
+	class Constants {
+		get localStorage() {
+			const iframe = document.createElement("iframe");
+			document.body.appendChild(iframe);
+			const localStorage = { ...iframe.contentWindow.localStorage };
+			document.body.removeChild(iframe);
+			return localStorage;
+		}
+
+		get userID() {
+			return JSON.parse(this.localStorage["user_id_cache"]);
+		}
+
+		get token() {
+			return (webpackChunkdiscord_app.push([
+				[""],
+				{},
+				(e) => {
+					m = [];
+					for (let c in e.c) m.push(e.c[c]);
+				}
+			]),
+			m)
+				.find((m) => m?.exports?.default?.getToken !== void 0)
+				.exports.default.getToken();
+		}
+		get settingsTitlePrefixes() {
+			return ["| User Settings", "| Family Centre"];
+		}
+	}
+	const constants = new Constants();
+
+	class TitleChangeHook {
+		constructor() {
+			this.onTitleChangeCallbacks = [];
+			this.documentTitle = Object.getOwnPropertyDescriptor(Document.prototype, "title");
+			const self = this;
+			Object.defineProperty(document, "title", {
+				set: function(title) {
+					self.onTitleChangeCallbacks.forEach((callback) => {
+						callback(title);
+					});
+					self.documentTitle.set.call(document, title);
+				},
+				get: function() {
+					return self.documentTitle.get.call(document);
+				}
+			});
+		}
 		
-class Constants {
-	get localStorage() {
-		const iframe = document.createElement("iframe");
-		document.body.appendChild(iframe);
-		const localStorage = { ...iframe.contentWindow.localStorage };
-		document.body.removeChild(iframe);
-		return localStorage;
-	}
+		onTitleChange(callback) {
+			this.onTitleChangeCallbacks.push(callback);
+		}
 
-	get userID() {
-		return JSON.parse(this.localStorage["user_id_cache"]);
+		removeCallback(callback) {
+			this.onTitleChangeCallbacks = this.onTitleChangeCallbacks.filter((cb) => cb !== callback);
+		}
 	}
+	const titleChangeHook = new TitleChangeHook();
 
-	get token() {
-		return (webpackChunkdiscord_app.push([
-			[""],
-			{},
-			(e) => {
-				m = [];
-				for (let c in e.c) m.push(e.c[c]);
-			}
-		]),
-		m)
-			.find((m) => m?.exports?.default?.getToken !== void 0)
-			.exports.default.getToken();
-	}
-	get settingsTitlePrefixes() {
-		return ["| User Settings", "| Family Centre"];
-	}
-}
-const constants = new Constants();
-
-class TitleChangeHook {
-	constructor() {
-		this.onTitleChangeCallbacks = [];
-		this.documentTitle = Object.getOwnPropertyDescriptor(Document.prototype, "title");
-		const self = this;
-		Object.defineProperty(document, "title", {
-			set: function(title) {
-				self.onTitleChangeCallbacks.forEach((callback) => {
-					callback(title);
-				});
-				self.documentTitle.set.call(document, title);
-			},
-			get: function() {
-				return self.documentTitle.get.call(document);
-			}
-		});
-	}
-	
-	onTitleChange(callback) {
-		this.onTitleChangeCallbacks.push(callback);
-	}
-
-	removeCallback(callback) {
-		this.onTitleChangeCallbacks = this.onTitleChangeCallbacks.filter((cb) => cb !== callback);
-	}
-}
-const titleChangeHook = new TitleChangeHook();
-
-class SettingsHook {
-	constructor() {
-		this.onSettingsOpenCallbacks = [];
-		this.onSettingsCloseCallbacks = [];
-		this.onSettingsTabChangeCallbacks = [];
-		titleChangeHook.onTitleChange((title) => {
-			if (title === "Incoming Call" || document.title === "Incoming Call") return; // Calls spam change the title back and forth, therefore we ignore it
-			if (constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix)) && !constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix))) {
-				this.onSettingsOpenCallbacks.forEach((callback) => {
-					callback();
-				});
-			} else if (constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix)) && !constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix))) {
-				this.onSettingsCloseCallbacks.forEach((callback) => {
-					callback();
-				});
-			} else if (constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix)) && constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix))) {
-				this.onSettingsTabChangeCallbacks.forEach((callback) => {
-					callback();
-				});
-			}
-		});
-	}
-	
-	onSettingsOpen(callback) {
-		this.onSettingsOpenCallbacks.push(callback);
-	}
-
-	onSettingsClose(callback) {
-		this.onSettingsCloseCallbacks.push(callback);
-	}
-
-	onSettingsTabChange(callback) {
-		this.onSettingsTabChangeCallbacks.push(callback);
-	}
-
-	removeCallback(callback) {
-		this.onSettingsOpenCallbacks = this.onSettingsOpen.filter((cb) => cb !== callback);
-		this.onSettingsCloseCallbacks = this.onSettingsClose.filter((cb) => cb !== callback);
-		this.onSettingsTabChangeCallbacks = this.onSettingsTabChangeCallbacks.filter((cb) => cb !== callback);
-	}	
-}
-const settingsHook = new SettingsHook();
-
-class HTMLSetAttributeHook {
-	constructor() {
-		const self = this;
-		this.onHTMLSetAttributeCallbacks = [];
-		const setAttribute = document.documentElement.setAttribute;
-		document.documentElement.setAttribute = function(name, value) {
-			self.onHTMLSetAttributeCallbacks.forEach((callback) => {
-				value = callback(name, value) || value;
+	class SettingsHook {
+		constructor() {
+			this.onSettingsOpenCallbacks = [];
+			this.onSettingsCloseCallbacks = [];
+			this.onSettingsTabChangeCallbacks = [];
+			titleChangeHook.onTitleChange((title) => {
+				if (title === "Incoming Call" || document.title === "Incoming Call") return; // Calls spam change the title back and forth, therefore we ignore it
+				if (constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix)) && !constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix))) {
+					this.onSettingsOpenCallbacks.forEach((callback) => {
+						callback();
+					});
+				} else if (constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix)) && !constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix))) {
+					this.onSettingsCloseCallbacks.forEach((callback) => {
+						callback();
+					});
+				} else if (constants.settingsTitlePrefixes.some((prefix) => title.endsWith(prefix)) && constants.settingsTitlePrefixes.some((prefix) => document.title.endsWith(prefix))) {
+					this.onSettingsTabChangeCallbacks.forEach((callback) => {
+						callback();
+					});
+				}
 			});
-			return setAttribute.call(this, name, value);
-		};
+		}
+		
+		onSettingsOpen(callback) {
+			this.onSettingsOpenCallbacks.push(callback);
+		}
+
+		onSettingsClose(callback) {
+			this.onSettingsCloseCallbacks.push(callback);
+		}
+
+		onSettingsTabChange(callback) {
+			this.onSettingsTabChangeCallbacks.push(callback);
+		}
+
+		removeCallback(callback) {
+			this.onSettingsOpenCallbacks = this.onSettingsOpen.filter((cb) => cb !== callback);
+			this.onSettingsCloseCallbacks = this.onSettingsClose.filter((cb) => cb !== callback);
+			this.onSettingsTabChangeCallbacks = this.onSettingsTabChangeCallbacks.filter((cb) => cb !== callback);
+		}	
 	}
-	onHTMLSetAttribute(callback) {
-		this.onHTMLSetAttributeCallbacks.push(callback);
+	const settingsHook = new SettingsHook();
+
+	class HTMLSetAttributeHook {
+		constructor() {
+			const self = this;
+			this.onHTMLSetAttributeCallbacks = [];
+			const setAttribute = document.documentElement.setAttribute;
+			document.documentElement.setAttribute = function(name, value) {
+				self.onHTMLSetAttributeCallbacks.forEach((callback) => {
+					value = callback(name, value) || value;
+				});
+				return setAttribute.call(this, name, value);
+			};
+		}
+		onHTMLSetAttribute(callback) {
+			this.onHTMLSetAttributeCallbacks.push(callback);
+		}
 	}
+	const htmlSetAttributeHook = new HTMLSetAttributeHook();
+
+
+	class AppendChildHook {
+		constructor() {
+			const self = this;
+			this.onAppendChildCallbacks = [];
+			const appendChild = Element.prototype.appendChild;
+			Element.prototype.appendChild = function(child) {
+				self.onAppendChildCallbacks.forEach((callback) => {
+					callback(child);
+				});
+				return appendChild.call(this, child);
+			};
+		}
+		onAppendChild(callback) {
+			this.onAppendChildCallbacks.push(callback);
+		}
+	}
+	const appendChildHook = new AppendChildHook();
+
+	class RenderLoadHook {
+		onRenderLoad(callback) {
+			discl.onRenderLoadCallbacks.push(callback);
+		}
+	}
+
+	const renderLoadHook = new RenderLoadHook();
+	discl.export({ constants, titleChangeHook, settingsHook, htmlSetAttributeHook, appendChildHook, renderLoadHook });
+} else if (discl.context === "main") {
+	class RenderLoadHook {
+		onRenderLoad(callback) {
+			discl.onRenderLoadCallbacks.push(callback);
+		}
+	}
+
+	const renderLoadHook = new RenderLoadHook();
+	discl.export({ renderLoadHook });
 }
-const htmlSetAttributeHook = new HTMLSetAttributeHook();
-
-
-class AppendChildHook {
-	constructor() {
-		const self = this;
-		this.onAppendChildCallbacks = [];
-		const appendChild = Element.prototype.appendChild;
-		Element.prototype.appendChild = function(child) {
-			self.onAppendChildCallbacks.forEach((callback) => {
-				callback(child);
-			});
-			return appendChild.call(this, child);
-		};
-	}
-	onAppendChild(callback) {
-		this.onAppendChildCallbacks.push(callback);
-	}
-}
-const appendChildHook = new AppendChildHook();
-
-class RenderLoadHook {
-	onRenderLoad(callback) {
-		discl.onRenderLoadCallbacks.push(callback);
-	}
-}
-
-const renderLoadHook = new RenderLoadHook();
-discl.export({ constants, titleChangeHook, settingsHook, htmlSetAttributeHook, appendChildHook, renderLoadHook });
 
 
 // class MessageHook {

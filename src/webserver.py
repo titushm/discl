@@ -56,10 +56,10 @@ def order_scripts(scripts, context):
 				for key, cache in script_dependencies_cache.items():
 					if script_name in cache:
 						found = True
-						break
+						continue
 				if not found:
 					utils.log(f"Script {script_name} not found in any context. It might be a missing dependency or typo.", colorama.Fore.RED)
-					return None
+					continue
 				utils.log(f"Script {script_name} not found in current context. Ignoring.", colorama.Fore.YELLOW)
 
 		return sorted_scripts
@@ -67,22 +67,20 @@ def order_scripts(scripts, context):
 		utils.log(f"Circular dependency detected: {e}", colorama.Fore.RED)
 		return None
 
-def get_scripts(context, before_bootloader, preload):
+def get_scripts(context, preload, force = False):
 	scripts = {}
 	script_filenames = list(SCRIPT_PATH.glob("*.js"))
 	for script_name in script_filenames:
-		response = utils.get_script_config(script_name)
-		if (not response["success"]):
-			utils.log(response["error"], colorama.Fore.RED)
+		config = utils.get_script_config(script_name)
+		if (not config["success"]):
+			utils.log(config["error"], colorama.Fore.RED)
 			continue
-		if ((response["config"]["context"]["context"] == context or response["config"]["context"]["context"] == "common") and (response["config"]["context"]["before_bootloader"] == before_bootloader or context == "render") and (response["config"]["context"]["preload"] == preload)):
-			scripts[script_name.name] = response["config"]
+		if ((config["config"]["context"]["context"] == context or config["config"]["context"]["context"] == "common") and (config["config"]["context"]["preload"] == preload) or force):
+			scripts[script_name.name] = config["config"]
 			scripts[script_name.name]["code"] = get_script(script_name.name)
 	return scripts
 
-script_dependencies_cache = {"render": get_scripts("render", False, False), "main": get_scripts("main", False, False)}
-script_dependencies_cache["render"].update(get_scripts("render", False, True))
-script_dependencies_cache["main"].update(get_scripts("main", False, True))
+script_dependencies_cache = {"render": get_scripts("render", False, True), "main": get_scripts("main", False, True)}
 
 @app.middleware("http")
 async def intercept_request(request: Request, call_next):
@@ -164,8 +162,8 @@ async def relay(websocket: WebSocket):
 						app.relay_connections.remove(relay)
 
 @app.get("/scripts/{context}", status_code=200)
-async def return_scripts(context: str, before_bootloader: bool = False, preload: bool = False):
-	scripts = get_scripts(context, before_bootloader, preload)
+async def return_scripts(context: str, preload: bool = False):
+	scripts = get_scripts(context, preload)
 	sorted_scripts = order_scripts(scripts, context)
 	return JSONResponse(content=sorted_scripts, status_code=200)
 

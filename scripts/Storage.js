@@ -3,7 +3,7 @@
 // @version: "builtin"
 // @description: "Provides an api for scripts to store and retrieve data"
 // @author: "TitusHM"
-// @context: {"context": "common", "before_bootloader": False, "preload": True}
+// @context: {"context": "common", "preload": True}
 // @dependencies: []
 // ==/Discl-Script==
 
@@ -39,14 +39,17 @@ if (discl.context === "render") {
 		constructor(id) {
 			this.id = id;
 		}
-		get(script) {
-			return {} //TODO: Implement
+
+		get() {
+			return discl.webserverFetch("/storage/get/" + this.id, "GET").then((response) => {
+				return response.body;
+			});
 		}
-	
-		set(script, config) {
-			return //TODO: Implement
+		set(config) {
+			discl.webserverFetch("/storage/set/" + this.id, "POST", {
+				body: JSON.stringify(config)
+			});
 		}
 	}
 	discl.export(Storage);
-
 }

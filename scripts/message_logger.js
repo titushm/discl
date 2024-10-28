@@ -3,7 +3,7 @@
 // @version: 1.0
 // @description: "See deleted messages"
 // @author: "TitusHM"
-// @context: {"context": "render", "before_bootloader": False, "preload": False}
+// @context: {"context": "render", "preload": False}
 // @dependencies: ["Storage.js"]
 // ==/Discl-Script==
 

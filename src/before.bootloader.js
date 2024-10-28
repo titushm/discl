@@ -26,22 +26,22 @@ function bootloader() {
 				const func = new Function(discl.scripts[script].code);
 				(async () => func())();
 			} catch (error) {
-				discl.log("Error executing script " + script + ": " + error, "BeforeBootloader");
+				discl.log("Error executing script " + script + ": " + error, "Preload");
 			}
 			discl.scripts[script].executed = true;
-			discl.log("Executed script " + script, "BeforeBootloader");
+			discl.log("Executed script " + script, "Preload");
 			discl.resetExport();
 		});
 	}
 
-	const request = net.request({ url: `http://127.0.0.1:${discl.config.ports.webserver}/scripts/main?before_bootloader=true`, method: "GET", headers: { Authorization: discl.request_token } });
+	const request = net.request({ url: `http://127.0.0.1:${discl.config.ports.webserver}/scripts/main?preload=true`, method: "GET", headers: { Authorization: discl.request_token } });
 	request.on("response", (response) => {
 		let scripts = "";
 		response.on("data", (chunk) => {
 			scripts += chunk;
 		});
 		response.on("end", () => {
-			discl.log("Fetched scripts", "BeforeBootloader");
+			discl.log("Fetched scripts", "Preload");
 			executeScripts(JSON.parse(scripts));
 		});
 	});
