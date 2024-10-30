@@ -39,7 +39,13 @@ if (discl.context == "render") {
 			status: this.status,
 			statusText: this.statusText
 		};
-		Requests.callbacks.onRequest.forEach((callback) => callback(params));
+		Requests.callbacks.onRequest.forEach((callback) => {
+			try {
+				callback(params);
+			} catch (error) {
+				console.error(error)
+			}
+		});
 		if (params.cancel) return;
 		return discl.XMLHttpRequestSend.apply(this, [params.body]);
 	}; // This is to handle the onRequest callbacks
@@ -64,7 +70,13 @@ if (discl.context == "render") {
 			timestamp: details.timestamp
 		};
 		//TODO: Make properties like body actually have an effect when changed.
-		Requests.callbacks.onRequest.forEach((callback) => callback(params));
+		Requests.callbacks.onRequest.forEach((callback) => {
+			try {
+				callback(params);
+			} catch (error) {
+				console.error(error)
+			}
+		});
 		callback({ cancel: params.cancel, requestHeaders: params.headers });
 	});
 }

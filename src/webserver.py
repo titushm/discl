@@ -80,6 +80,22 @@ def get_scripts(context, preload, force = False):
 			scripts[script_name.name]["code"] = get_script(script_name.name)
 	return scripts
 
+def reset_script_storage(script):
+	temp = open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "w")
+	temp.write("{}")
+	temp.close()
+
+def validate_script_storage(script):
+	if (not os.path.exists(SCRIPT_STORAGE_PATH)):
+		os.makedirs(SCRIPT_STORAGE_PATH)
+	if (not os.path.exists(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"))):
+		reset_script_storage(script)
+	try:
+		with open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "r") as f:
+			json.load(f)
+	except:
+		reset_script_storage(script)
+
 script_dependencies_cache = {"render": get_scripts("render", False, True), "main": get_scripts("main", False, True)}
 
 @app.middleware("http")
@@ -187,26 +203,21 @@ async def post_injection_failure(request: Request):
 	app.injection_state["reason"] = reason
 	return Response(status_code=200)
 
-
 @app.post("/storage/set/{script}", status_code=200)
 async def set_storage(request: Request, script: str):
+	data = None
+	try:
+		data = await request.json()
+	except:
+		return Response(status_code=400)
 	with open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "w") as f:
-		try:
-			json.dump(await request.json(), f)
-		except:
-			return Response(status_code=400)
-	return Response(status_code=200)
+		json.dump(data, f)
 
 @app.get("/storage/get/{script}", status_code=200)
 async def get_storage(script: str):
-	if (not os.path.exists(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"))):
-		temp = open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "w")
-		temp.write("{}")
-		temp.close()
+	validate_script_storage(script)
 	with open(os.path.join(SCRIPT_STORAGE_PATH, script + ".json"), "r") as f:
-		return JSONResponse(content=json.loads(f.read()), status_code=200)
-
-
+		return JSONResponse(content=json.load(f), status_code=200)
 
 class WebServer():
 	def __init__(self, port, request_token):

@@ -11,6 +11,7 @@ discl.log("Loaded", "Patches");
 const scriptSettings = discl.require("ScriptSettings.js");
 const ui = discl.require("UI.js");
 const modules = discl.require("Modules.js");
+
 const defaultConfig = {
 	"Anti Spotify Pause": {
 		enabled: true,
