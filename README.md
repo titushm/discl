@@ -1,3 +1,6 @@
+# [⚠️ Currently not working as of 20/05/25 ⚠️]
+`Discord seems to have disabled the --inspect argument from starting a debugging port on the main electron process, this breaks alot of functions of the mod. I will attempt to fix this soon!`
+
 # discl
 
 discord-command-line
