@@ -1,5 +1,6 @@
 # [⚠️ Currently not working as of 20/05/25 ⚠️]
-`Discord seems to have disabled the --inspect argument from starting a debugging port on the main electron process, this breaks alot of functions of the mod. I will attempt to fix this soon!`
+~~Discord seems to have disabled the --inspect argument from starting a debugging port on the main electron process, this breaks alot of functions of the mod. I will attempt to fix this soon!~~
+The inspect argument once again works however the chrome dev tools protocol `Runtime.evaluate` cannot be found when trying to use it. no clue why this happens.
 
 # discl
 
